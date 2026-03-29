@@ -6,6 +6,7 @@ class BotDetector
 {
     private array $blockedPatterns;
     private array $allowedPatterns;
+    private bool  $blockEmptyUA;
 
     public function __construct(array $botsConfig)
     {
@@ -17,6 +18,8 @@ class BotDetector
             fn($s) => '/' . preg_quote($s, '/') . '/i',
             $botsConfig['allowed'] ?? []
         );
+        // Default true — no legitimate browser or API client omits User-Agent
+        $this->blockEmptyUA = $botsConfig['block_empty_user_agent'] ?? true;
     }
 
     /**
@@ -24,7 +27,13 @@ class BotDetector
      */
     public function check(string $userAgent): ?array
     {
-        if ($userAgent === '') return null;
+        // Block missing / empty User-Agent
+        if ($userAgent === '') {
+            if ($this->blockEmptyUA) {
+                return ['rule' => 'missing-user-agent', 'matched' => ''];
+            }
+            return null;
+        }
 
         // Allowed bots always pass
         foreach ($this->allowedPatterns as $pattern) {

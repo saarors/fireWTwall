@@ -3,7 +3,8 @@
 return [
     'blocked' => [
         'sqlmap', 'nikto', 'masscan', 'zgrab', 'dirbuster', 'dirb',
-        'gobuster', 'wfuzz', 'nmap', 'hydra', 'metasploit', 'havij',
+        'gobuster', 'wfuzz', 'nmap', 'Nmap Scripting Engine',
+        'hydra', 'metasploit', 'havij',
         'acunetix', 'nessus', 'openvas', 'w3af', 'skipfish', 'arachni',
         'vega', 'burpsuite', 'ZmEu', 'libwww-perl', 'lwp-trivial',
         'binlar', 'BlackWidow', 'BlowFish', 'CazoodleBot', 'comodo',
@@ -16,4 +17,6 @@ return [
         'Googlebot', 'Bingbot', 'Slurp', 'DuckDuckBot', 'Baiduspider',
         'YandexBot', 'Sogou', 'facebot', 'ia_archiver',
     ],
+    // Block requests with a missing/empty User-Agent header
+    'block_empty_user_agent' => true,
 ];

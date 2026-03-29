@@ -9,6 +9,7 @@
     "gobuster",
     "wfuzz",
     "nmap",
+    "Nmap Scripting Engine",
     "hydra",
     "metasploit",
     "havij",
@@ -58,5 +59,6 @@
     "Sogou",
     "facebot",
     "ia_archiver"
-  ]
+  ],
+  "blockEmptyUserAgent": true
 }

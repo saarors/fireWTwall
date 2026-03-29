@@ -24,9 +24,14 @@ class WAF
     private RateLimiter $rateLimiter;
     private BotDetector $botDetector;
 
+    private string  $requestId;
+    private float   $startTime;
+
     public function __construct(array $config)
     {
         $this->config      = $config;
+        $this->requestId   = bin2hex(random_bytes(8));
+        $this->startTime   = microtime(true);
         $this->ipFilter    = new IpFilter($config['whitelist'] ?? [], $config['blacklist'] ?? []);
         $this->request     = new Request($config['trusted_proxies'] ?? []);
         $this->logger      = new Logger($config['log_path']);
@@ -142,8 +147,24 @@ class WAF
             $this->block($hit['rule'], $ip, $hit['source'], $hit['matched'], $hit['severity']);
         }
 
-        // All checks passed — set security headers before application code runs
+        // All checks passed
         Response::sendSecurityHeaders();
+
+        if ($this->config['debug'] ?? false) {
+            $durationMs = round((microtime(true) - $this->startTime) * 1000, 3);
+            @header('X-WAF-RequestId: ' . $this->requestId);
+            @header('X-WAF-Result: passed');
+            @header('X-WAF-Time: '      . $durationMs . 'ms');
+
+            $this->logger->logPass(
+                $ip,
+                $method,
+                $path,
+                $this->request->getUserAgent(),
+                $this->requestId,
+                $durationMs
+            );
+        }
     }
 
     // ------------------------------------------------------------------ //
@@ -168,6 +189,14 @@ class WAF
             $severity,
             $this->request->getUserAgent()
         );
+
+        if ($this->config['debug'] ?? false) {
+            $durationMs = round((microtime(true) - $this->startTime) * 1000, 3);
+            @header('X-WAF-RequestId: ' . $this->requestId);
+            @header('X-WAF-Result: blocked');
+            @header('X-WAF-Rule: '      . $rule);
+            @header('X-WAF-Time: '      . $durationMs . 'ms');
+        }
 
         if ($this->config['mode'] === 'log-only') return;
 

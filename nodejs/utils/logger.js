@@ -18,7 +18,6 @@ function getStream(logPath) {
   _logPath = logPath;
   _stream = fs.createWriteStream(logPath, { flags: 'a', highWaterMark: 64 * 1024 });
 
-  // Flush buffer on process exit
   process.on('exit', () => {
     try { _stream.end(); } catch {}
   });
@@ -26,40 +25,48 @@ function getStream(logPath) {
   return _stream;
 }
 
-/**
- * Write a structured NDJSON log entry for a blocked (or flagged) request.
- *
- * @param {object} opts
- * @param {string}  opts.logPath
- * @param {string}  opts.ip
- * @param {string}  opts.method
- * @param {string}  opts.path
- * @param {string}  opts.rule
- * @param {string}  [opts.matched]
- * @param {string}  [opts.source]
- * @param {string}  [opts.severity]
- * @param {string}  [opts.userAgent]
- */
-function logBlock(opts) {
-  const entry = {
-    timestamp: new Date().toISOString(),
-    requestId: crypto.randomBytes(8).toString('hex'),
-    ip: opts.ip,
-    method: opts.method,
-    path: opts.path,
-    rule: opts.rule,
-    matched: opts.matched || '',
-    source: opts.source || '',
-    severity: opts.severity || 'medium',
-    userAgent: opts.userAgent || '',
-  };
-
+function write(logPath, entry) {
   try {
-    getStream(opts.logPath).write(JSON.stringify(entry) + '\n');
+    getStream(logPath).write(JSON.stringify(entry) + '\n');
   } catch (err) {
-    // Don't let logging errors crash the app
     console.error('[WAF] Log write error:', err.message);
   }
 }
 
-module.exports = { logBlock };
+/**
+ * Log a blocked / flagged request.
+ */
+function logBlock(opts) {
+  write(opts.logPath, {
+    timestamp:  new Date().toISOString(),
+    requestId:  opts.requestId || crypto.randomBytes(8).toString('hex'),
+    result:     'blocked',
+    ip:         opts.ip,
+    method:     opts.method,
+    path:       opts.path,
+    rule:       opts.rule,
+    matched:    opts.matched    || '',
+    source:     opts.source     || '',
+    severity:   opts.severity   || 'medium',
+    userAgent:  opts.userAgent  || '',
+    durationMs: opts.durationMs ?? null,
+  });
+}
+
+/**
+ * Log a request that passed all WAF checks (debug mode only).
+ */
+function logPass(opts) {
+  write(opts.logPath, {
+    timestamp:  new Date().toISOString(),
+    requestId:  opts.requestId || crypto.randomBytes(8).toString('hex'),
+    result:     'passed',
+    ip:         opts.ip,
+    method:     opts.method,
+    path:       opts.path,
+    userAgent:  opts.userAgent  || '',
+    durationMs: opts.durationMs ?? null,
+  });
+}
+
+module.exports = { logBlock, logPass };

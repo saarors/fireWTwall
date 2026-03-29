@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm whoami:*)",
+      "Bash(curl -s -A \"Nmap Scripting Engine\" http://localhost:3000/)",
+      "Bash(curl -s -A \"nmap\" http://localhost:3000/)"
+    ]
+  }
+}

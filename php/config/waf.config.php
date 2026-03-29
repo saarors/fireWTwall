@@ -35,4 +35,8 @@ return [
 
     // Block response format: 'json' or 'html'
     'response_type' => 'json',
+
+    // Debug mode: log every request (pass + block) and add X-WAF-* response headers.
+    // Never enable in production — exposes internal rule names in headers.
+    'debug' => false,
 ];

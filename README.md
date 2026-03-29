@@ -84,6 +84,53 @@ app.use(...createWAF({
 }));
 ```
 
+### Debug mode
+
+```js
+app.use(...createWAF({ debug: true }));
+```
+
+When `debug: true`:
+- Every request (pass **and** block) is logged with timing
+- Every response gets `X-WAF-*` headers:
+
+| Header | Example value |
+|--------|--------------|
+| `X-WAF-RequestId` | `f47ac10b58cc1122` |
+| `X-WAF-Result` | `blocked` or `passed` |
+| `X-WAF-Rule` | `sql-union-select` (blocked only) |
+| `X-WAF-Time` | `0.831ms` |
+
+> **Never enable `debug: true` in production** — it exposes rule names to the client.
+
+### Log viewer CLI
+
+After installing the package a `waf-log` binary is available:
+
+```bash
+# Last 50 entries (default)
+npx waf-log
+
+# Last 100 entries from a custom log file
+npx waf-log --tail 100 ./logs/waf.log
+
+# Stats summary — top rules, top IPs, severity breakdown
+npx waf-log --stats
+
+# Only blocked requests
+npx waf-log --blocked
+
+# Filter by IP or rule (partial match)
+npx waf-log --ip 203.0.113.42
+npx waf-log --rule sql
+
+# Entries after a date
+npx waf-log --since 2026-03-29T12:00:00Z
+
+# Raw NDJSON output (pipe-friendly)
+npx waf-log --json | jq .
+```
+
 ### Swap the rate-limit store (Redis, multi-process deployments)
 
 ```js

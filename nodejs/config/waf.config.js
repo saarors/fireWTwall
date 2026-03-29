@@ -34,4 +34,8 @@ module.exports = {
 
   // Block responses: 'json' or 'html'
   responseType: 'json',
+
+  // Debug mode: log every request (pass + block) and add X-WAF-* response headers.
+  // Never enable in production — exposes internal rule names in headers.
+  debug: false,
 };

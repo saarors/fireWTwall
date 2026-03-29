@@ -1,0 +1,15 @@
+{
+  "name": "firewtwall",
+  "version": "1.0.0",
+  "description": "Web Application Firewall middleware for Node.js/Express",
+  "main": "waf.js",
+  "scripts": {
+    "example": "node example/server.js",
+    "test": "node --experimental-vm-modules node_modules/.bin/jest"
+  },
+  "keywords": ["waf", "firewall", "security", "express", "middleware"],
+  "license": "MIT",
+  "devDependencies": {
+    "express": "^4.18.2"
+  }
+}

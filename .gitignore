@@ -1,0 +1,19 @@
+# Node.js
+node_modules/
+nodejs/logs/*.log
+npm-debug.log*
+
+# PHP
+php/logs/*.log
+php/vendor/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo

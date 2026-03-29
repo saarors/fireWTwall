@@ -1,0 +1,15 @@
+{
+  "name": "saarors/firewtwall-php",
+  "description": "Zero-dependency PHP Web Application Firewall — auto_prepend_file middleware",
+  "type": "library",
+  "license": "MIT",
+  "require": {
+    "php": ">=8.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "FireWTWall\\": "src/"
+    }
+  },
+  "keywords": ["waf", "firewall", "security", "php", "middleware"]
+}

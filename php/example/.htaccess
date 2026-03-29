@@ -1,0 +1,3 @@
+# Enable the fireWTwall WAF for this directory.
+# Change the path to the absolute location of waf.php on your server.
+php_value auto_prepend_file "/path/to/fireWTwall/php/waf.php"

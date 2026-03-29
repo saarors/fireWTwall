@@ -1,14 +1,52 @@
 {
   "name": "firewtwall",
   "version": "1.0.0",
-  "description": "Web Application Firewall middleware for Node.js/Express",
+  "description": "Zero-dependency Web Application Firewall middleware for Node.js / Express — SQL injection, XSS, path traversal, command injection, rate limiting, and more.",
   "main": "waf.js",
-  "scripts": {
-    "example": "node example/server.js",
-    "test": "node --experimental-vm-modules node_modules/.bin/jest"
+  "exports": {
+    ".": "./waf.js"
   },
-  "keywords": ["waf", "firewall", "security", "express", "middleware"],
+  "files": [
+    "waf.js",
+    "config/",
+    "middleware/",
+    "utils/",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "start": "node example/server.js",
+    "example": "node example/server.js"
+  },
+  "keywords": [
+    "waf",
+    "firewall",
+    "web-application-firewall",
+    "security",
+    "express",
+    "middleware",
+    "sql-injection",
+    "xss",
+    "rate-limiting",
+    "path-traversal",
+    "command-injection",
+    "crlf",
+    "ip-filter",
+    "bot-protection"
+  ],
+  "author": "saarors",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/saarors/fireWTwall.git"
+  },
+  "homepage": "https://github.com/saarors/fireWTwall#readme",
+  "bugs": {
+    "url": "https://github.com/saarors/fireWTwall/issues"
+  },
+  "engines": {
+    "node": ">=16"
+  },
   "devDependencies": {
     "express": "^4.18.2"
   }

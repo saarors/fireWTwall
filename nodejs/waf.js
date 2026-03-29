@@ -54,4 +54,9 @@ function mergeConfig(defaults, overrides) {
   return merged;
 }
 
-module.exports = { createWAF };
+// Re-export setStore so consumers can swap the rate-limit backend (e.g. Redis)
+// without having to reach into the internals:
+//   const { createWAF, setStore } = require('firewtwall');
+const { setStore } = require('./middleware/rateLimit');
+
+module.exports = { createWAF, setStore };

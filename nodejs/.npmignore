@@ -1,0 +1,4 @@
+# Development / example files — not included in the published package
+example/
+logs/
+.gitkeep

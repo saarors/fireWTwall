@@ -12,6 +12,9 @@ php/vendor/
 Thumbs.db
 desktop.ini
 
+# Claude Code
+.claude/
+
 # Editor
 .vscode/
 .idea/

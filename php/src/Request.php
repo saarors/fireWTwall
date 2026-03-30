@@ -123,6 +123,20 @@ class Request
 
     public function deepDecode(string $value, int $maxPasses = 3): string
     {
+        // Normalise double-encoded percent signs (%2500 → %00) before decoding
+        $value = str_replace('%2500', '%00', $value);
+
+        // Decode Unicode escape sequences (\uXXXX → UTF-8)
+        $value = preg_replace_callback(
+            '/\\\\u([0-9a-fA-F]{4})/',
+            static fn(array $m): string => mb_convert_encoding(
+                pack('H*', $m[1]),
+                'UTF-8',
+                'UCS-2BE'
+            ),
+            $value
+        ) ?? $value;
+
         $prev = null;
         for ($i = 0; $i < $maxPasses; $i++) {
             $value   = str_replace("\x00", '', $value);

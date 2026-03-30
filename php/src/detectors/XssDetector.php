@@ -22,6 +22,14 @@ class XssDetector
         ['name' => 'xss-dom-write',        'severity' => 'high',     'pattern' => '/document\s*\.\s*(?:write|writeln)\s*\(/i'],
         ['name' => 'xss-inner-html',       'severity' => 'high',     'pattern' => '/\.innerHTML\s*=/i'],
         ['name' => 'xss-angularjs-bind',   'severity' => 'high',     'pattern' => '/\{\{.*\}\}/'],
+        // Extended coverage
+        ['name' => 'xss-css-import',       'severity' => 'high',     'pattern' => '/@import\s+url\s*\(/i'],
+        ['name' => 'xss-moz-binding',      'severity' => 'high',     'pattern' => '/-moz-binding\s*:/i'],
+        ['name' => 'xss-meta-refresh',     'severity' => 'high',     'pattern' => '/<meta[^>]+http-equiv\s*=\s*["\']?refresh/i'],
+        ['name' => 'xss-form-action',      'severity' => 'high',     'pattern' => '/<form[^>]+action\s*=\s*["\']?javascript/i'],
+        ['name' => 'xss-link-import',      'severity' => 'high',     'pattern' => '/<link[^>]+rel\s*=\s*["\']?import/i'],
+        ['name' => 'xss-svg-animate',      'severity' => 'medium',   'pattern' => '/<animate[^>]+attributeName/i'],
+        ['name' => 'xss-base-href',        'severity' => 'medium',   'pattern' => '/<base[^>]+href/i'],
     ];
 
     public static function scan(array $sources): ?array

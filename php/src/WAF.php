@@ -8,6 +8,10 @@ use FireWTWall\Detectors\PathTraversalDetector;
 use FireWTWall\Detectors\BotDetector;
 use FireWTWall\Detectors\CommandInjectionDetector;
 use FireWTWall\Detectors\HeaderInjectionDetector;
+use FireWTWall\Detectors\SsrfDetector;
+use FireWTWall\Detectors\XxeDetector;
+use FireWTWall\Detectors\OpenRedirectDetector;
+use FireWTWall\Detectors\MassAssignmentDetector;
 
 /**
  * Core WAF orchestrator.
@@ -103,6 +107,30 @@ class WAF
         $botHit = $this->botDetector->check($this->request->getUserAgent());
         if ($botHit !== null) {
             $this->block('bad-bot', $ip, 'user-agent', $botHit['matched'], 'high');
+        }
+
+        // --- 5a. SSRF ---
+        $hit = SsrfDetector::scan($this->request, $this->config);
+        if ($hit !== null) {
+            $this->block($hit['rule'], $ip, $hit['source'], $hit['matched'], $hit['severity']);
+        }
+
+        // --- 5b. XXE ---
+        $hit = XxeDetector::scan($this->request, $this->config);
+        if ($hit !== null) {
+            $this->block($hit['rule'], $ip, $hit['source'], $hit['matched'], $hit['severity']);
+        }
+
+        // --- 5c. Open redirect ---
+        $hit = OpenRedirectDetector::scan($this->request, $this->config);
+        if ($hit !== null) {
+            $this->block($hit['rule'], $ip, $hit['source'], $hit['matched'], $hit['severity']);
+        }
+
+        // --- 5d. Mass assignment ---
+        $hit = MassAssignmentDetector::scan($this->request, $this->config);
+        if ($hit !== null) {
+            $this->block($hit['rule'], $ip, $hit['source'], $hit['matched'], $hit['severity']);
         }
 
         // --- 6. Header injection (CRLF + host injection) ---

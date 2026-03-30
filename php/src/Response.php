@@ -9,13 +9,16 @@ class Response
 {
     /** Security headers added to every block response */
     private static array $securityHeaders = [
-        'X-Content-Type-Options'       => 'nosniff',
-        'X-Frame-Options'              => 'SAMEORIGIN',
-        'X-XSS-Protection'             => '1; mode=block',
-        'Referrer-Policy'              => 'strict-origin-when-cross-origin',
-        'Cross-Origin-Opener-Policy'   => 'same-origin',
-        'Cross-Origin-Resource-Policy' => 'same-origin',
-        'Cache-Control'                => 'no-store',
+        'X-Content-Type-Options'          => 'nosniff',
+        'X-Frame-Options'                 => 'SAMEORIGIN',
+        'X-XSS-Protection'                => '1; mode=block',
+        'Referrer-Policy'                 => 'strict-origin-when-cross-origin',
+        'Cross-Origin-Opener-Policy'      => 'same-origin',
+        'Cross-Origin-Resource-Policy'    => 'same-origin',
+        'Cache-Control'                   => 'no-store',
+        'Strict-Transport-Security'       => 'max-age=31536000; includeSubDomains; preload',
+        'Content-Security-Policy'         => "default-src 'self'; script-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'",
+        'X-Permitted-Cross-Domain-Policies' => 'none',
     ];
 
     /**
@@ -108,5 +111,7 @@ HTML;
         foreach (self::$securityHeaders as $name => $value) {
             header($name . ': ' . $value);
         }
+        // Remove X-Powered-By to avoid leaking server/runtime information
+        header('X-Powered-By: ', true);
     }
 }

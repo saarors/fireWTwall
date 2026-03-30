@@ -14,6 +14,13 @@ class CommandInjectionDetector
         ['name' => 'cmd-wget-curl',      'severity' => 'critical', 'pattern' => '/\b(?:wget|curl)\s+(?:https?|ftp):\/\//i'],
         ['name' => 'cmd-base64-decode',  'severity' => 'high',     'pattern' => '/base64\s*(?:--decode|-d)\b/i'],
         ['name' => 'cmd-redirection',    'severity' => 'high',     'pattern' => '/(?:^|[^<])>{1,2}\s*\/(?:etc|tmp|var|dev)/'],
+        // Extended coverage
+        ['name' => 'cmd-python-exec',    'severity' => 'critical', 'pattern' => '/python[23]?\s+-[cC]\s+["\']?.*import|python[23]?\s+-[cC]\s+["\']?.*exec/i'],
+        ['name' => 'cmd-ruby-exec',      'severity' => 'critical', 'pattern' => '/ruby\s+-e\s+["\']?/i'],
+        ['name' => 'cmd-perl-exec',      'severity' => 'critical', 'pattern' => '/perl\s+-e\s+["\']?/i'],
+        ['name' => 'cmd-php-exec',       'severity' => 'critical', 'pattern' => '/php\s+-r\s+["\']?/i'],
+        ['name' => 'cmd-netcat',         'severity' => 'critical', 'pattern' => '/\bnc\s+-[enlvz]|\bnetcat\b/i'],
+        ['name' => 'cmd-whoami',         'severity' => 'high',     'pattern' => '/\bwhoami\b|\bid\b|\bpasswd\b/i'],
     ];
 
     public static function scan(array $sources): ?array

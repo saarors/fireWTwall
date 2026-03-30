@@ -1,9 +1,11 @@
 # 🔥 fireWTwall
 
 [![npm](https://img.shields.io/npm/v/firewtwall)](https://www.npmjs.com/package/firewtwall)
+[![npm version](https://img.shields.io/badge/version-2.0.0-orange)](https://www.npmjs.com/package/firewtwall)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D16-brightgreen)](https://nodejs.org)
 [![PHP](https://img.shields.io/badge/php-%3E%3D8.0-777BB4)](https://www.php.net)
+[![TypeScript](https://img.shields.io/badge/types-included-blue)](nodejs/index.d.ts)
 [![Author](https://img.shields.io/badge/author-saarors-blue)](https://github.com/saarors)
 
 > **Created and maintained by [saarors](https://github.com/saarors)**
@@ -19,21 +21,42 @@ Both versions share the same detection philosophy, rule sets, and NDJSON log for
 
 ---
 
+## What's new in v2.0.0
+
+| Area | Change |
+|------|--------|
+| 🛡️ **SSRF detection** | Blocks private IPs, cloud metadata (169.254.169.254), dangerous URI schemes in redirect params |
+| 🛡️ **XXE detection** | Catches DOCTYPE, ENTITY SYSTEM/PUBLIC, parameter entities, XInclude in XML bodies |
+| 🛡️ **Open redirect** | Blocks absolute-URL values in redirect/return/next/dest params |
+| 🛡️ **Prototype pollution** | Detects `__proto__`, `constructor.prototype`, recursive JSON key scanning (Node.js) |
+| 🛡️ **Mass assignment** | PHP equivalent — blocks magic key names like `__destruct`, `__wakeup`, `_method` |
+| 📋 **+40 new rules** | SQL (+12), XSS (+8), Command injection (+8), Path traversal (+4) |
+| 🤖 **69 bad bots** | Added: ffuf, gobuster, nuclei, interactsh, Shodan, Censys, Metasploit, Nessus, wpscan, and 25 more |
+| 🍪 **Cookie scanning** | All detectors now inspect cookies as a separate source |
+| 🔒 **Security headers** | Added HSTS, CSP, `X-Permitted-Cross-Domain-Policies`, NEL, removes `X-Powered-By` |
+| 📝 **TypeScript types** | Full `index.d.ts` included in the npm package |
+
+---
+
 ## Protections
 
-| Layer | What it catches |
-|-------|----------------|
-| **SQL Injection** | UNION SELECT, stacked queries, time-based blind (SLEEP/WAITFOR/pg_sleep), DBMS fingerprinting, BULK INSERT, OPENROWSET — 26 rules |
-| **XSS** | Script tags, event handlers (`on*=`), DOM manipulation, AngularJS `{{}}` templates, data URIs, innerHTML — 21 rules |
-| **Path Traversal** | `../` sequences, null bytes, PHP stream wrappers (`php://filter`), sensitive file detection (`.env`, `wp-config.php`, `.git/`) |
-| **Command Injection** | Shell pipes/subshells, Windows cmd/PowerShell, wget/curl RCE chains, base64 decode |
-| **CRLF / Header Injection** | HTTP response splitting, host-header injection |
-| **Rate Limiting** | Sliding-window per IP — configurable window, limit, and block duration. Pluggable store (Redis-ready) |
-| **IP Filter** | Blacklist + whitelist with CIDR notation — IPv4 and IPv6 |
-| **Bad Bot Blocking** | 40+ blocked signatures: sqlmap, nikto, masscan, dirbuster, Burp Suite, and more |
-| **HTTP Method Filter** | Rejects non-configured methods (TRACE, CONNECT, custom verbs) |
-| **Request Size Limit** | Content-Length header check + streamed byte guard |
-| **Security Headers** | X-Frame-Options, X-Content-Type-Options, COOP, CORP, Referrer-Policy on every response |
+| Layer | What it catches | Rules |
+|-------|----------------|-------|
+| **SQL Injection** | UNION SELECT, stacked queries, blind (SLEEP/WAITFOR), DBMS fingerprinting, EXTRACTVALUE, UPDATEXML, GTID_SUBSET, EXP(~()), sys schema, CASE WHEN | **38** |
+| **XSS** | Script tags, event handlers, DOM sinks, AngularJS templates, data URIs, SVG animate, CSS @import, -moz-binding, meta refresh | **29** |
+| **Path Traversal** | `../` sequences, null bytes, PHP stream wrappers, Windows paths (`C:\`, system32), `/boot/grub`, `.env`, `.git/`, `.ssh/` | **18** |
+| **Command Injection** | Shell pipes/subshells, PowerShell, wget/curl RCE, Python/Ruby/Perl/PHP/Node CLI, netcat, whoami, env dump | **18** |
+| **SSRF** | Private IP ranges, cloud metadata endpoints, dangerous URI schemes (file://, gopher://) in URL params | **3** |
+| **XXE** | DOCTYPE, ENTITY SYSTEM/PUBLIC, parameter entities, XInclude — XML bodies only | **5** |
+| **Open Redirect** | Absolute URLs or `//` in redirect/return/next/dest params | **1** |
+| **Prototype Pollution** | `__proto__`, `constructor.prototype` in query/body/JSON (Node.js); magic key names (PHP) | **1** |
+| **CRLF / Header Injection** | HTTP response splitting, host-header injection | — |
+| **Rate Limiting** | Sliding-window per IP — configurable window, limit, and block duration. Pluggable store (Redis-ready) | — |
+| **IP Filter** | Blacklist + whitelist with CIDR notation — IPv4 and IPv6 | — |
+| **Bad Bot Blocking** | 69 blocked signatures: sqlmap, nikto, nmap, ffuf, nuclei, Shodan, wpscan, Metasploit, and more | — |
+| **HTTP Method Filter** | Rejects non-configured methods (TRACE, CONNECT, custom verbs) | — |
+| **Request Size Limit** | Content-Length header check + streamed byte guard | — |
+| **Security Headers** | HSTS, CSP, COOP, CORP, COEP, Referrer-Policy, Permissions-Policy, NEL, removes `X-Powered-By` | — |
 
 **Dual mode:** `mode: 'reject'` blocks requests · `mode: 'log-only'` logs without blocking (recommended for initial rollout)
 
@@ -347,24 +370,29 @@ Every blocked request appends one NDJSON line to the log file:
 fireWTwall/
 ├── nodejs/                        ← Published as npm package "firewtwall"
 │   ├── waf.js                     ← Entry: createWAF(), setStore()
+│   ├── index.d.ts                 ← TypeScript definitions (v2.0.0)
 │   ├── package.json
 │   ├── config/
 │   │   ├── waf.config.js
-│   │   └── bad-bots.json
-│   ├── middleware/                ← 11 independent middleware modules
-│   │   ├── securityHeaders.js
+│   │   └── bad-bots.json          ← 69 blocked signatures
+│   ├── middleware/                ← 16 independent middleware modules
+│   │   ├── securityHeaders.js     ← HSTS, CSP, NEL, removes X-Powered-By
 │   │   ├── requestSize.js
 │   │   ├── methodFilter.js
 │   │   ├── ipFilter.js
 │   │   ├── rateLimit.js           ← Pluggable store interface
 │   │   ├── botFilter.js
+│   │   ├── prototypePollution.js  ← NEW: __proto__, constructor.prototype
+│   │   ├── ssrf.js                ← NEW: private IPs, cloud metadata, schemes
+│   │   ├── xxe.js                 ← NEW: DOCTYPE, ENTITY, XInclude
+│   │   ├── openRedirect.js        ← NEW: absolute URLs in redirect params
 │   │   ├── headerInjection.js
-│   │   ├── pathTraversal.js
-│   │   ├── commandInjection.js
-│   │   ├── sqlInjection.js
-│   │   └── xss.js
+│   │   ├── pathTraversal.js       ← 18 rules (+ Windows, system32, /boot)
+│   │   ├── commandInjection.js    ← 18 rules (+ Python/Ruby/Perl/PHP/Node CLI)
+│   │   ├── sqlInjection.js        ← 38 rules (+ EXTRACTVALUE, GTID, EXP(~()))
+│   │   └── xss.js                 ← 29 rules (+ CSS @import, SVG animate)
 │   └── utils/
-│       ├── patternMatcher.js      ← Multi-pass URL/HTML decode engine
+│       ├── patternMatcher.js      ← Multi-pass decode + cookie scanning
 │       ├── ipUtils.js             ← IPv4 + IPv6 CIDR matching
 │       └── logger.js              ← Buffered NDJSON logger
 │
@@ -373,21 +401,25 @@ fireWTwall/
     ├── composer.json
     ├── config/
     │   ├── waf.config.php
-    │   └── bad-bots.php
+    │   └── bad-bots.php           ← 69 blocked signatures
     └── src/
-        ├── WAF.php
-        ├── Request.php
+        ├── WAF.php                ← 15-step pipeline
+        ├── Request.php            ← Double-encoding + Unicode decode
         ├── IpFilter.php
         ├── RateLimiter.php
         ├── Logger.php
-        ├── Response.php
+        ├── Response.php           ← HSTS, CSP, removes X-Powered-By
         └── detectors/
-            ├── SqlInjectionDetector.php
-            ├── XssDetector.php
-            ├── PathTraversalDetector.php
-            ├── CommandInjectionDetector.php
+            ├── SqlInjectionDetector.php   ← 38 rules
+            ├── XssDetector.php            ← 29 rules
+            ├── PathTraversalDetector.php  ← 18 rules
+            ├── CommandInjectionDetector.php ← 18 rules
             ├── HeaderInjectionDetector.php
-            └── BotDetector.php
+            ├── BotDetector.php
+            ├── SsrfDetector.php           ← NEW
+            ├── XxeDetector.php            ← NEW
+            ├── OpenRedirectDetector.php   ← NEW
+            └── MassAssignmentDetector.php ← NEW
 ```
 
 ---

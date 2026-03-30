@@ -4,23 +4,29 @@ const { scanSources } = require('../utils/patternMatcher');
 const { logBlock } = require('../utils/logger');
 
 const PATH_RULES = [
-  // Traversal sequences
-  { name: 'path-traversal-dotdot', severity: 'critical', pattern: /(?:\.\.[\\/]|[\\/]\.\.)/  },
+  // ── Traversal sequences ────────────────────────────────────────────────
+  { name: 'path-traversal-dotdot',  severity: 'critical', pattern: /(?:\.\.[\\/]|[\\/]\.\.)/ },
   { name: 'path-traversal-encoded', severity: 'critical', pattern: /%2e%2e[%2f5c]/i },
   { name: 'path-traversal-unicode', severity: 'critical', pattern: /(?:%c0%ae|%c1%9c)/i },
   { name: 'path-null-byte',         severity: 'critical', pattern: /%00|\x00/ },
 
-  // Sensitive file access
-  { name: 'path-etc-passwd',   severity: 'critical', pattern: /\/etc\/(?:passwd|shadow|hosts|group)\b/ },
-  { name: 'path-win-system',   severity: 'critical', pattern: /(?:c:|%systemroot%)[/\\]/i },
-  { name: 'path-env-file',     severity: 'high',     pattern: /(?:^|\/)\.env(?:\.|$)/ },
-  { name: 'path-wp-config',    severity: 'high',     pattern: /wp-config\.php/i },
-  { name: 'path-htaccess',     severity: 'high',     pattern: /\.htaccess\b/i },
-  { name: 'path-git-config',   severity: 'high',     pattern: /\.git[\\/]/i },
-  { name: 'path-ssh-keys',     severity: 'high',     pattern: /\.ssh[\\/]/i },
-  { name: 'path-proc-self',    severity: 'critical', pattern: /\/proc\/self\//i },
-  { name: 'path-php-wrappers', severity: 'high',     pattern: /(?:php|zip|phar|data|expect|glob|file):\/\//i },
-  { name: 'path-php-filter',   severity: 'high',     pattern: /php:\/\/(?:filter|input|stdin)/i },
+  // ── Sensitive file access ──────────────────────────────────────────────
+  { name: 'path-etc-passwd',        severity: 'critical', pattern: /\/etc\/(?:passwd|shadow|hosts|group)\b/ },
+  { name: 'path-win-system',        severity: 'critical', pattern: /(?:c:|%systemroot%)[/\\]/i },
+  { name: 'path-env-file',          severity: 'high',     pattern: /(?:^|\/)\.env(?:\.|$)/ },
+  { name: 'path-wp-config',         severity: 'high',     pattern: /wp-config\.php/i },
+  { name: 'path-htaccess',          severity: 'high',     pattern: /\.htaccess\b/i },
+  { name: 'path-git-config',        severity: 'high',     pattern: /\.git[\\/]/i },
+  { name: 'path-ssh-keys',          severity: 'high',     pattern: /\.ssh[\\/]/i },
+  { name: 'path-proc-self',         severity: 'critical', pattern: /\/proc\/self\//i },
+  { name: 'path-php-wrappers',      severity: 'high',     pattern: /(?:php|zip|phar|data|expect|glob|file):\/\//i },
+  { name: 'path-php-filter',        severity: 'high',     pattern: /php:\/\/(?:filter|input|stdin)/i },
+
+  // ── New rules (v2) ─────────────────────────────────────────────────────
+  { name: 'path-windows-root',      severity: 'high',     pattern: /[a-zA-Z]:\\|%SYSTEMROOT%|%WINDIR%/i,      description: 'Windows root path access' },
+  { name: 'path-system32',          severity: 'critical', pattern: /windows[\\\/]system32/i,                   description: 'Windows system32 access' },
+  { name: 'path-boot',              severity: 'critical', pattern: /\/boot\/grub|\/boot\/vmlinuz|\/boot\/initrd/i, description: 'Boot files access' },
+  { name: 'path-file-scheme',       severity: 'high',     pattern: /file:\/\/\/[a-zA-Z]:/i,                    description: 'Windows file URI access' },
 ];
 
 function createPathTraversalMiddleware(config) {
@@ -40,14 +46,14 @@ function createPathTraversalMiddleware(config) {
       const ruleDef = PATH_RULES.find((r) => r.name === hit.rule);
 
       logBlock({
-        logPath: config.logPath,
+        logPath:   config.logPath,
         ip,
-        method: req.method,
-        path: req.path,
-        rule: hit.rule,
-        matched: hit.matched,
-        source: hit.source,
-        severity: ruleDef?.severity || 'high',
+        method:    req.method,
+        path:      req.path,
+        rule:      hit.rule,
+        matched:   hit.matched,
+        source:    hit.source,
+        severity:  ruleDef?.severity || 'high',
         userAgent: req.headers['user-agent'] || '',
       });
 
@@ -55,7 +61,7 @@ function createPathTraversalMiddleware(config) {
 
       return res.status(403).json({
         blocked: true,
-        rule: hit.rule,
+        rule:    hit.rule,
         message: 'Request blocked by WAF',
       });
     }

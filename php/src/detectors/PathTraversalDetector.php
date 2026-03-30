@@ -19,6 +19,10 @@ class PathTraversalDetector
         ['name' => 'path-proc-self',         'severity' => 'critical', 'pattern' => '/\/proc\/self\//i'],
         ['name' => 'path-php-wrappers',      'severity' => 'high',     'pattern' => '/(?:php|zip|phar|data|expect|glob|file):\/\//i'],
         ['name' => 'path-php-filter',        'severity' => 'high',     'pattern' => '/php:\/\/(?:filter|input|stdin)/i'],
+        // Extended coverage
+        ['name' => 'path-windows-root',      'severity' => 'high',     'pattern' => '/[a-zA-Z]:\\\\|%SYSTEMROOT%|%WINDIR%/i'],
+        ['name' => 'path-system32',          'severity' => 'critical', 'pattern' => '/windows[\\\\\/]system32/i'],
+        ['name' => 'path-boot',              'severity' => 'critical', 'pattern' => '/\/boot\/grub|\/boot\/vmlinuz|\/boot\/initrd/i'],
     ];
 
     public static function scan(array $sources): ?array

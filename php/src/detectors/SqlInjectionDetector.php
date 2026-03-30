@@ -35,6 +35,17 @@ class SqlInjectionDetector
         ['name' => 'sql-declare-set',       'severity' => 'high',     'pattern' => '/\bdeclare\s+@\w+\b/i'],
         ['name' => 'sql-bulk-insert',       'severity' => 'critical', 'pattern' => '/\bbulk\s+insert\b/i'],
         ['name' => 'sql-openrowset',        'severity' => 'critical', 'pattern' => '/\bopenrowset\s*\(/i'],
+        // Extended coverage
+        ['name' => 'sql-case-when',         'severity' => 'high',     'pattern' => '/CASE\s+WHEN\s+.*\s+THEN/i'],
+        ['name' => 'sql-extractvalue',      'severity' => 'critical', 'pattern' => '/EXTRACTVALUE\s*\(/i'],
+        ['name' => 'sql-updatexml',         'severity' => 'critical', 'pattern' => '/UPDATEXML\s*\(/i'],
+        ['name' => 'sql-sys-tables',        'severity' => 'critical', 'pattern' => '/sys\.(user_summary|processlist|statements_with_errors)/i'],
+        ['name' => 'sql-gtid',              'severity' => 'critical', 'pattern' => '/GTID_SUBSET\s*\(/i'],
+        ['name' => 'sql-exp-tilde',         'severity' => 'critical', 'pattern' => '/exp\(~\(/i'],
+        ['name' => 'sql-polygon',           'severity' => 'high',     'pattern' => '/(polygon|geometrycollection|linestring|multipoint)\s*\(/i'],
+        ['name' => 'sql-procedure-analyse', 'severity' => 'high',     'pattern' => '/procedure\s+analyse\s*\(/i'],
+        ['name' => 'sql-having',            'severity' => 'high',     'pattern' => '/\bHAVING\s+\d+\s*=\s*\d+/i'],
+        ['name' => 'sql-dbms-version',      'severity' => 'critical', 'pattern' => '/@@version|@@global|@@session/i'],
     ];
 
     public static function scan(array $sources): ?array

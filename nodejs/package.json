@@ -1,13 +1,15 @@
 {
   "name": "firewtwall",
-  "version": "1.0.5",
+  "version": "2.0.0",
   "description": "Zero-dependency Web Application Firewall middleware for Node.js / Express — SQL injection, XSS, path traversal, command injection, rate limiting, and more.",
   "main": "waf.js",
+  "types": "./index.d.ts",
   "exports": {
     ".": "./waf.js"
   },
   "files": [
     "waf.js",
+    "index.d.ts",
     "config/",
     "middleware/",
     "utils/",

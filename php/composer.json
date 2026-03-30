@@ -1,5 +1,6 @@
 {
   "name": "saarors/firewtwall-php",
+  "version": "2.0.0",
   "description": "Zero-dependency PHP Web Application Firewall — auto_prepend_file middleware",
   "type": "library",
   "license": "MIT",

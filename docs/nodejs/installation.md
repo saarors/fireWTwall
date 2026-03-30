@@ -2,15 +2,31 @@
 
 ## Requirements
 
-- Node.js >= 16
+- Node.js >= 16 or Bun >= 1.0.0
 - Express (any version — firewtwall has zero runtime dependencies)
 
 ---
 
 ## Install
 
+### npm
 ```bash
 npm install firewtwall
+```
+
+### Bun
+```bash
+bun add firewtwall
+```
+
+### pnpm
+```bash
+pnpm add firewtwall
+```
+
+### Yarn
+```bash
+yarn add firewtwall
 ```
 
 ---

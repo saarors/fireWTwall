@@ -1,6 +1,6 @@
 # fireWTwall Documentation
 
-A production-ready Web Application Firewall with zero external runtime dependencies. Available as an npm package for Node.js/Express and as a drop-in PHP auto-prepend file. Both versions share the same rule sets, detection philosophy, and NDJSON log format.
+A production-ready Web Application Firewall with zero external runtime dependencies. Available as an npm package for Node.js, Bun, and Express — and as a drop-in PHP auto-prepend file. All versions share the same rule sets, detection philosophy, and NDJSON log format.
 
 ---
 
@@ -8,18 +8,19 @@ A production-ready Web Application Firewall with zero external runtime dependenc
 
 | File | Description |
 |------|-------------|
-| [getting-started.md](getting-started.md) | Fast path for Node.js and PHP — install, minimal setup, first test |
+| [getting-started.md](getting-started.md) | Fast path for Node.js, Bun, and PHP — install, minimal setup, first test |
 | [architecture.md](architecture.md) | Request lifecycle, pattern matching internals, logging, rate limiting |
 | [log-format.md](log-format.md) | Complete NDJSON log field reference with examples and jq queries |
 | [security-headers.md](security-headers.md) | Every security header added to every response, with customization notes |
 | [false-positives.md](false-positives.md) | How to diagnose and resolve false positives |
 | [changelog.md](changelog.md) | Version history |
 
-### Node.js
+### Node.js & Bun
 
 | File | Description |
 |------|-------------|
-| [nodejs/installation.md](nodejs/installation.md) | Full install guide: requirements, setup, body parser ordering |
+| [nodejs/installation.md](nodejs/installation.md) | Full install guide: npm, Bun, pnpm, Yarn — requirements and setup |
+| [nodejs/bun.md](nodejs/bun.md) | Bun runtime: installation, examples, performance benefits, troubleshooting |
 | [nodejs/configuration.md](nodejs/configuration.md) | Every config key documented with type, default, and examples |
 | [nodejs/middleware-pipeline.md](nodejs/middleware-pipeline.md) | All 23 middleware in order: what each does, HTTP status, severity |
 | [nodejs/debug-mode.md](nodejs/debug-mode.md) | Debug mode: headers, log verbosity, CLI usage, production warning |

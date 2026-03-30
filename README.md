@@ -4,6 +4,7 @@
 [![version](https://img.shields.io/badge/version-2.1.0-orange)](https://github.com/saarors/fireWTwall/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D16-brightgreen)](https://nodejs.org)
+[![Bun](https://img.shields.io/badge/bun-%3E%3D1.0.0-fdbf1d)](https://bun.sh)
 [![PHP](https://img.shields.io/badge/php-%3E%3D8.0-777BB4)](https://www.php.net)
 [![Packagist](https://img.shields.io/packagist/v/saarors/firewtwall-php)](https://packagist.org/packages/saarors/firewtwall-php)
 [![TypeScript](https://img.shields.io/badge/types-included-blue)](nodejs/index.d.ts)
@@ -12,22 +13,24 @@
 > **Designed, built and maintained by [saarors](https://github.com/saarors)**
 
 A production-ready **Web Application Firewall (WAF)** with **zero external runtime dependencies**.
-Available as an **npm package** for Node.js / Express and as a drop-in **PHP auto-prepend file**.
+Available as an **npm package** for Node.js, Bun, and Express — and as a drop-in **PHP auto-prepend file**.
 
-| Version | Integration | Install | Package |
-|---------|-------------|---------|---------|
-| **Node.js** | Express middleware chain | `npm install firewtwall` | [![npm](https://img.shields.io/npm/v/firewtwall)](https://www.npmjs.com/package/firewtwall) |
-| **PHP** | `auto_prepend_file` / `.htaccess` / Composer | `composer require saarors/firewtwall-php` | [![Packagist](https://img.shields.io/packagist/v/saarors/firewtwall-php)](https://packagist.org/packages/saarors/firewtwall-php) |
+| Version | Runtime | Install | Package |
+|---------|---------|---------|---------|
+| **Node.js** | Node.js >= 16 | `npm install firewtwall` | [![npm](https://img.shields.io/npm/v/firewtwall)](https://www.npmjs.com/package/firewtwall) |
+| **Bun** | Bun >= 1.0.0 | `bun add firewtwall` | [![npm](https://img.shields.io/npm/v/firewtwall)](https://www.npmjs.com/package/firewtwall) |
+| **PHP** | PHP >= 8.0 | `composer require saarors/firewtwall-php` | [![Packagist](https://img.shields.io/packagist/v/saarors/firewtwall-php)](https://packagist.org/packages/saarors/firewtwall-php) |
 
-Both versions share the same rule sets, detection philosophy, and NDJSON log format.
+All versions share the same rule sets, detection philosophy, and NDJSON log format.
 
 ---
 
 ## Table of contents
 
 1. [Protections](#protections)
-2. [Node.js](#nodejs--npm-package)
+2. [Node.js & Bun](#nodejs--bun)
    - [Quick start](#quick-start)
+   - [Bun runtime](#bun-runtime)
    - [All options](#all-options)
    - [Debug mode](#debug-mode)
    - [Log viewer CLI](#log-viewer-cli)
@@ -106,15 +109,22 @@ Both versions share the same rule sets, detection philosophy, and NDJSON log for
 
 ---
 
-## Node.js — npm package
+## Node.js & Bun
 
 ### Quick start
 
+**npm:**
 ```bash
 npm install firewtwall
 ```
 
-```js
+**Bun:**
+```bash
+bun add firewtwall
+```
+
+**Example (works with both):**
+```bash
 const express = require('express');
 const { createWAF } = require('firewtwall');
 
@@ -130,6 +140,25 @@ app.use(...createWAF());
 app.get('/', (req, res) => res.json({ ok: true }));
 app.listen(3000);
 ```
+
+---
+
+### Bun runtime
+
+fireWTwall fully supports [Bun](https://bun.sh) — a fast JavaScript runtime that's fully compatible with Node.js APIs.
+
+**Run with Bun:**
+```bash
+bun example/server.js
+```
+
+**Performance benefits:**
+- Faster startup than Node.js
+- Lower memory footprint
+- Identical security protection
+- No code changes needed
+
+See [docs/nodejs/bun.md](docs/nodejs/bun.md) for complete Bun documentation.
 
 ---
 

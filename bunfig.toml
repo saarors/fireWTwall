@@ -1,0 +1,6 @@
+# Bun configuration for fireWTwall
+# Reference: https://bun.sh/docs/bunfig
+
+[install]
+# Use optional peer dependencies
+optional = true

@@ -39,7 +39,8 @@
   },
   "autoload": {
     "psr-4": {
-      "FireWTWall\\": "php/src/"
+      "FireWTWall\\": "php/src/",
+      "FireWTWall\\Detectors\\": "php/src/detectors/"
     }
   },
   "autoload-dev": {
@@ -55,5 +56,10 @@
   },
   "extra": {
     "entrypoint": "php/waf.php"
-  }
+  },
+  "repositories": [{
+    "name": "firewtwall",
+    "type": "vcs",
+    "url": "https://github.com/saarors/fireWTwall"
+  }]
 }

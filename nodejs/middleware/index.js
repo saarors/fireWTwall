@@ -16,6 +16,13 @@ const createPathTraversalMiddleware         = require('./pathTraversal');
 const createCommandInjectionMiddleware      = require('./commandInjection');
 const createSqlInjectionMiddleware          = require('./sqlInjection');
 const createXssMiddleware                   = require('./xss');
+const createSstiMiddleware                  = require('./ssti');
+const createRfiMiddleware                   = require('./rfi');
+const createLog4shellMiddleware             = require('./log4shell');
+const createShellshockMiddleware            = require('./shellshock');
+const createNosqlInjectionMiddleware        = require('./nosqlInjection');
+const createLdapInjectionMiddleware         = require('./ldapInjection');
+const createDeserializationMiddleware       = require('./deserialization');
 
 /**
  * Returns an ordered array of Express middleware for the WAF.
@@ -41,6 +48,13 @@ function buildMiddlewareChain(config) {
     createCommandInjectionMiddleware(config),      // 13. OS command injection
     createSqlInjectionMiddleware(config),          // 14. SQL injection
     createXssMiddleware(config),                   // 15. XSS
+    createSstiMiddleware(config),                  // 16. Server-Side Template Injection
+    createRfiMiddleware(config),                   // 17. Remote File Inclusion
+    createLog4shellMiddleware(config),             // 18. Log4Shell / JNDI injection
+    createShellshockMiddleware(config),            // 19. Shellshock bash injection
+    createNosqlInjectionMiddleware(config),        // 20. NoSQL / MongoDB injection
+    createLdapInjectionMiddleware(config),         // 21. LDAP injection
+    createDeserializationMiddleware(config),       // 22. Unsafe deserialization
   ];
 }
 

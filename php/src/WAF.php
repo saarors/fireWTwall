@@ -12,6 +12,13 @@ use FireWTWall\Detectors\SsrfDetector;
 use FireWTWall\Detectors\XxeDetector;
 use FireWTWall\Detectors\OpenRedirectDetector;
 use FireWTWall\Detectors\MassAssignmentDetector;
+use FireWTWall\Detectors\SstiDetector;
+use FireWTWall\Detectors\RfiDetector;
+use FireWTWall\Detectors\Log4ShellDetector;
+use FireWTWall\Detectors\ShellshockDetector;
+use FireWTWall\Detectors\NoSqlInjectionDetector;
+use FireWTWall\Detectors\LdapInjectionDetector;
+use FireWTWall\Detectors\DeserializationDetector;
 
 /**
  * Core WAF orchestrator.
@@ -171,6 +178,48 @@ class WAF
 
         // --- 10. XSS ---
         $hit = XssDetector::scan($sources);
+        if ($hit !== null) {
+            $this->block($hit['rule'], $ip, $hit['source'], $hit['matched'], $hit['severity']);
+        }
+
+        // --- 11. SSTI ---
+        $hit = SstiDetector::scan($this->request, $this->config);
+        if ($hit !== null) {
+            $this->block($hit['rule'], $ip, $hit['source'], $hit['matched'], $hit['severity']);
+        }
+
+        // --- 12. RFI ---
+        $hit = RfiDetector::scan($this->request, $this->config);
+        if ($hit !== null) {
+            $this->block($hit['rule'], $ip, $hit['source'], $hit['matched'], $hit['severity']);
+        }
+
+        // --- 13. Log4Shell ---
+        $hit = Log4ShellDetector::scan($this->request, $this->config);
+        if ($hit !== null) {
+            $this->block($hit['rule'], $ip, $hit['source'], $hit['matched'], $hit['severity']);
+        }
+
+        // --- 14. Shellshock ---
+        $hit = ShellshockDetector::scan($this->request, $this->config);
+        if ($hit !== null) {
+            $this->block($hit['rule'], $ip, $hit['source'], $hit['matched'], $hit['severity']);
+        }
+
+        // --- 15. NoSQL injection ---
+        $hit = NoSqlInjectionDetector::scan($this->request, $this->config);
+        if ($hit !== null) {
+            $this->block($hit['rule'], $ip, $hit['source'], $hit['matched'], $hit['severity']);
+        }
+
+        // --- 16. LDAP injection ---
+        $hit = LdapInjectionDetector::scan($this->request, $this->config);
+        if ($hit !== null) {
+            $this->block($hit['rule'], $ip, $hit['source'], $hit['matched'], $hit['severity']);
+        }
+
+        // --- 17. Deserialization ---
+        $hit = DeserializationDetector::scan($this->request, $this->config);
         if ($hit !== null) {
             $this->block($hit['rule'], $ip, $hit['source'], $hit['matched'], $hit['severity']);
         }

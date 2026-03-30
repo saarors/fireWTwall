@@ -25,6 +25,12 @@ return [
 		'medusa',
 		// Additional scanners
 		'golismero', 'joomscan', 'wpscan', 'droopescan',
+		// Exploitation frameworks / payloads
+		'msf/', 'msfconsole', 'msfpayload', 'jndi-exploit', 'log4j-scanner',
+		'interactsh-client', 'routersploit', 'beef-', 'xsser', 'fimap',
+		'grabber', 'uniscan', 'vega/', 'paros', 'websecurify', 'n-stealth',
+		'webinspect', 'ibm appscan', 'hp webinspect', 'dotdotpwn', 'jexboss',
+		'commix', 'tplmap', 'ysoserial', 'nabuu',
 	],
 	'allowed' => [
 		'Googlebot', 'Bingbot', 'Slurp', 'DuckDuckBot', 'Baiduspider',

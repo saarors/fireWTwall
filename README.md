@@ -62,19 +62,6 @@ All versions share the same rule sets, detection philosophy, and NDJSON log form
 | 🔍 | **Zero False Positives** | Whitelist for legitimate crawlers (Google, Bing, Yandex, DuckDuckGo, etc.) |
 | ⚡ | **Performance** | Optimized regex patterns, cached config, minimal overhead |
 
-### v2.1.0 — Metasploit-class protections
-
-| | Area | CVEs / Metasploit modules covered |
-|--|------|----------------------------------|
-| 🛡️ | **SSTI** (18 rules) | Jinja2, Twig, FreeMarker, Velocity, Smarty, ERB, OGNL/Struts2, Spring4Shell (CVE-2022-22965), Tornado |
-| 🛡️ | **RFI** — Remote File Inclusion (6 rules) | HTTP/FTP/SMB/expect:// inclusion, log poisoning, `/proc/self/environ` |
-| 🛡️ | **Log4Shell** (6 rules) | CVE-2021-44228 — JNDI LDAP/RMI/DNS, all obfuscation variants (`${lower:}`, `${::-j}`, nested) |
-| 🛡️ | **Shellshock** (2 rules) | CVE-2014-6271 / CVE-2014-7169 — `() { :; };` in any header |
-| 🛡️ | **NoSQL injection** (11 rules) | MongoDB `$ne`, `$gt`, `$lt`, `$where`, `$regex`, `$expr`, bracket-notation (`[$ne]=1`) |
-| 🛡️ | **LDAP injection** (6 rules) | Filter bypass, parenthesis injection, null-byte, uid/admin wildcard, hex-encoded chars |
-| 🛡️ | **Deserialization** (7 rules) | PHP `O:N:` objects, Java `AC ED 00 05` (base64 + hex), Python pickle, node-serialize RCE |
-| 🤖 | **97 blocked bots** | Added: msf/, msfpayload, tplmap, ysoserial, jexboss, commix, dotdotpwn, xsser, beef-, and 20+ more |
-
 ---
 
 ## Protections

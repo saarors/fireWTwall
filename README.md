@@ -14,14 +14,10 @@
 A production-ready **Web Application Firewall (WAF)** with **zero external runtime dependencies**.
 Available as an **npm package** for Node.js / Express and as a drop-in **PHP auto-prepend file**.
 
-```bash
-npm install firewtwall
-```
-
-| Version | Integration | Get it |
-|---------|-------------|--------|
-| **Node.js** | Express middleware chain | `npm install firewtwall` |
-| **PHP** | `auto_prepend_file` / `.htaccess` | Clone / download `php/` |
+| Version | Integration | Install | Package |
+|---------|-------------|---------|---------|
+| **Node.js** | Express middleware chain | `npm install firewtwall` | [![npm](https://img.shields.io/npm/v/firewtwall)](https://www.npmjs.com/package/firewtwall) |
+| **PHP** | `auto_prepend_file` / `.htaccess` / Composer | `composer require saarors/firewtwall-php` | [![Packagist](https://img.shields.io/packagist/v/saarors/firewtwall-php)](https://packagist.org/packages/saarors/firewtwall-php) |
 
 Both versions share the same rule sets, detection philosophy, and NDJSON log format.
 
@@ -679,7 +675,7 @@ MIT © [saarors](https://github.com/saarors)
 
 | Contributor | Role | Commits | Lines+ | Lines− |
 |-------------|------|--------:|-------:|-------:|
-| **[saarors](https://github.com/saarors)** | Author & lead developer | **#1** | **+3,696** | **-403** |
+| **[saarors](https://github.com/saarors)** [![GitHub](https://img.shields.io/badge/github-saarors-181717?logo=github)](https://github.com/saarors) | Author & lead developer | **#1** | **+3,696** | **-403** |
 | claude | AI pair-programmer | #2 | +3,473 | -201 |
 
 > **saarors** is the #1 contributor by every metric.
@@ -687,3 +683,4 @@ MIT © [saarors](https://github.com/saarors)
 
 [![GitHub](https://img.shields.io/badge/github-saarors%2FfireWTwall-181717?logo=github)](https://github.com/saarors/fireWTwall)
 [![npm](https://img.shields.io/badge/npm-firewtwall-CB3837?logo=npm)](https://www.npmjs.com/package/firewtwall)
+[![Packagist](https://img.shields.io/packagist/v/saarors/firewtwall-php?logo=packagist&label=packagist)](https://packagist.org/packages/saarors/firewtwall-php)

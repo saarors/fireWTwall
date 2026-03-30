@@ -5,6 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D16-brightgreen)](https://nodejs.org)
 [![PHP](https://img.shields.io/badge/php-%3E%3D8.0-777BB4)](https://www.php.net)
+[![Packagist](https://img.shields.io/packagist/v/saarors/firewtwall-php)](https://packagist.org/packages/saarors/firewtwall-php)
 [![TypeScript](https://img.shields.io/badge/types-included-blue)](nodejs/index.d.ts)
 [![Author](https://img.shields.io/badge/author-saarors-blue)](https://github.com/saarors)
 
@@ -400,17 +401,39 @@ curl http://localhost:3000/
 
 ### Installation
 
-**Option A — `php.ini`** (server-wide):
+**Option A — Composer** (recommended):
+
+[![Packagist](https://img.shields.io/packagist/v/saarors/firewtwall-php)](https://packagist.org/packages/saarors/firewtwall-php)
+
+```bash
+composer require saarors/firewtwall-php
+```
+
+Then load it at the top of your entry point:
+```php
+<?php
+require_once __DIR__ . '/vendor/autoload.php';
+require_once __DIR__ . '/vendor/saarors/firewtwall-php/php/waf.php';
+```
+
+Or via `php.ini` / `.htaccess` (auto-runs before every script):
+```ini
+auto_prepend_file = /path/to/vendor/saarors/firewtwall-php/php/waf.php
+```
+
+---
+
+**Option B — `php.ini`** (server-wide, no Composer):
 ```ini
 auto_prepend_file = /absolute/path/to/fireWTwall/php/waf.php
 ```
 
-**Option B — `.htaccess`** (per-directory, Apache):
+**Option C — `.htaccess`** (per-directory, Apache):
 ```apache
 php_value auto_prepend_file "/absolute/path/to/fireWTwall/php/waf.php"
 ```
 
-**Option C — manual include** (any framework):
+**Option D — manual include** (any framework):
 ```php
 <?php
 require_once '/path/to/fireWTwall/php/waf.php';

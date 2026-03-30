@@ -1,76 +1,106 @@
 # 🔥 fireWTwall
 
 [![npm](https://img.shields.io/npm/v/firewtwall)](https://www.npmjs.com/package/firewtwall)
-[![npm version](https://img.shields.io/badge/version-2.0.0-orange)](https://www.npmjs.com/package/firewtwall)
+[![version](https://img.shields.io/badge/version-2.0.0-orange)](https://github.com/saarors/fireWTwall/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D16-brightgreen)](https://nodejs.org)
 [![PHP](https://img.shields.io/badge/php-%3E%3D8.0-777BB4)](https://www.php.net)
 [![TypeScript](https://img.shields.io/badge/types-included-blue)](nodejs/index.d.ts)
 [![Author](https://img.shields.io/badge/author-saarors-blue)](https://github.com/saarors)
 
-> **Created and maintained by [saarors](https://github.com/saarors)**
+> **Designed, built and maintained by [saarors](https://github.com/saarors)**
 
-A production-ready **Web Application Firewall (WAF)** with **zero external runtime dependencies**, available as an **npm package** for Node.js/Express and as a drop-in **PHP auto-prepend file**.
+A production-ready **Web Application Firewall (WAF)** with **zero external runtime dependencies**.
+Available as an **npm package** for Node.js / Express and as a drop-in **PHP auto-prepend file**.
 
-| Version | Integration | Install |
-|---------|-------------|---------|
-| **Node.js** | Express middleware | `npm install firewtwall` |
-| **PHP** | `auto_prepend_file` | Clone / download `php/` |
+```bash
+npm install firewtwall
+```
 
-Both versions share the same detection philosophy, rule sets, and NDJSON log format.
+| Version | Integration | Get it |
+|---------|-------------|--------|
+| **Node.js** | Express middleware chain | `npm install firewtwall` |
+| **PHP** | `auto_prepend_file` / `.htaccess` | Clone / download `php/` |
+
+Both versions share the same rule sets, detection philosophy, and NDJSON log format.
+
+---
+
+## Table of contents
+
+1. [What's new in v2.0.0](#whats-new-in-v200)
+2. [Protections](#protections)
+3. [Node.js](#nodejs--npm-package)
+   - [Quick start](#quick-start)
+   - [All options](#all-options)
+   - [Debug mode](#debug-mode)
+   - [Log viewer CLI](#log-viewer-cli)
+   - [Redis / multi-process](#redis--multi-process)
+   - [Configuration reference](#configuration-reference)
+   - [TypeScript](#typescript)
+   - [Test commands](#test-commands)
+4. [PHP](#php)
+   - [Requirements & install](#requirements)
+   - [Configuration](#configuration-phpconfigwafconfigphp)
+   - [Rate limiter storage](#rate-limiter-storage)
+   - [Debug mode (PHP)](#debug-mode-php)
+5. [Middleware pipeline](#middleware-pipeline)
+6. [Log format](#log-format)
+7. [Security headers](#security-headers-added-to-every-response)
+8. [Project structure](#project-structure)
+9. [Important notes](#important-notes)
+10. [License & credits](#license)
 
 ---
 
 ## What's new in v2.0.0
 
-| Area | Change |
-|------|--------|
-| 🛡️ **SSRF detection** | Blocks private IPs, cloud metadata (169.254.169.254), dangerous URI schemes in redirect params |
-| 🛡️ **XXE detection** | Catches DOCTYPE, ENTITY SYSTEM/PUBLIC, parameter entities, XInclude in XML bodies |
-| 🛡️ **Open redirect** | Blocks absolute-URL values in redirect/return/next/dest params |
-| 🛡️ **Prototype pollution** | Detects `__proto__`, `constructor.prototype`, recursive JSON key scanning (Node.js) |
-| 🛡️ **Mass assignment** | PHP equivalent — blocks magic key names like `__destruct`, `__wakeup`, `_method` |
-| 📋 **+40 new rules** | SQL (+12), XSS (+8), Command injection (+8), Path traversal (+4) |
-| 🤖 **69 bad bots** | Added: ffuf, gobuster, nuclei, interactsh, Shodan, Censys, Metasploit, Nessus, wpscan, and 25 more |
-| 🍪 **Cookie scanning** | All detectors now inspect cookies as a separate source |
-| 🔒 **Security headers** | Added HSTS, CSP, `X-Permitted-Cross-Domain-Policies`, NEL, removes `X-Powered-By` |
-| 📝 **TypeScript types** | Full `index.d.ts` included in the npm package |
+| | Area | Detail |
+|--|------|--------|
+| 🛡️ | **SSRF detection** | Blocks private IPs, cloud metadata (`169.254.169.254`, Azure, GCP), dangerous URI schemes (`file://`, `gopher://`) in URL-bearing params |
+| 🛡️ | **XXE detection** | Catches `DOCTYPE`, `ENTITY SYSTEM/PUBLIC`, parameter entities, `<xi:include>` — activated on XML bodies only |
+| 🛡️ | **Open redirect** | Blocks absolute URLs and protocol-relative (`//`) values in redirect / return / next / dest params |
+| 🛡️ | **Prototype pollution** | Recursive JSON key scan for `__proto__`, `constructor.prototype` (Node.js) |
+| 🛡️ | **Mass assignment** | PHP equivalent — blocks `__destruct`, `__wakeup`, `_method`, `__class__` in input keys |
+| 📋 | **+40 detection rules** | SQL (+12), XSS (+8), Command injection (+8), Path traversal (+4) |
+| 🤖 | **69 blocked bots** | Added: ffuf, gobuster, nuclei, interactsh, Shodan, Censys, Metasploit, Nessus, wpscan, droopescan, and 20+ more |
+| 🍪 | **Cookie scanning** | All detectors now inspect cookies — logged as `cookie:<name>` |
+| 🔒 | **Hardened headers** | HSTS, CSP, `X-Permitted-Cross-Domain-Policies`, NEL — `X-Powered-By` removed |
+| 📝 | **TypeScript types** | Full `index.d.ts` ships with the npm package |
 
 ---
 
 ## Protections
 
 | Layer | What it catches | Rules |
-|-------|----------------|-------|
-| **SQL Injection** | UNION SELECT, stacked queries, blind (SLEEP/WAITFOR), DBMS fingerprinting, EXTRACTVALUE, UPDATEXML, GTID_SUBSET, EXP(~()), sys schema, CASE WHEN | **38** |
-| **XSS** | Script tags, event handlers, DOM sinks, AngularJS templates, data URIs, SVG animate, CSS @import, -moz-binding, meta refresh | **29** |
-| **Path Traversal** | `../` sequences, null bytes, PHP stream wrappers, Windows paths (`C:\`, system32), `/boot/grub`, `.env`, `.git/`, `.ssh/` | **18** |
-| **Command Injection** | Shell pipes/subshells, PowerShell, wget/curl RCE, Python/Ruby/Perl/PHP/Node CLI, netcat, whoami, env dump | **18** |
-| **SSRF** | Private IP ranges, cloud metadata endpoints, dangerous URI schemes (file://, gopher://) in URL params | **3** |
-| **XXE** | DOCTYPE, ENTITY SYSTEM/PUBLIC, parameter entities, XInclude — XML bodies only | **5** |
-| **Open Redirect** | Absolute URLs or `//` in redirect/return/next/dest params | **1** |
-| **Prototype Pollution** | `__proto__`, `constructor.prototype` in query/body/JSON (Node.js); magic key names (PHP) | **1** |
+|-------|----------------|:-----:|
+| **SQL Injection** | UNION SELECT, stacked queries, blind injection (SLEEP / WAITFOR / pg_sleep), EXTRACTVALUE, UPDATEXML, GTID_SUBSET, EXP(~()), sys schema, CASE WHEN, PROCEDURE ANALYSE, DBMS variable leaks (`@@version`) | **38** |
+| **XSS** | Script tags, `on*=` event handlers, DOM sinks (innerHTML, document.write), AngularJS `{{}}`, data URIs, SVG animate, CSS `@import`, `-moz-binding`, meta refresh, form action JS | **29** |
+| **Path Traversal** | `../` sequences, null bytes, PHP stream wrappers (`php://filter`), Windows paths (`C:\`, `%SYSTEMROOT%`, system32), `/boot/grub`, `.env`, `wp-config.php`, `.git/`, `.ssh/` | **18** |
+| **Command Injection** | Shell pipes / subshells, PowerShell, wget/curl RCE chains, base64 decode, Python / Ruby / Perl / PHP / Node.js CLI execution, netcat, whoami/id, env dump | **18** |
+| **SSRF** | Private IP ranges, cloud metadata endpoints, dangerous URI schemes in URL params | **3** |
+| **XXE** | DOCTYPE, ENTITY SYSTEM / PUBLIC, parameter entities, XInclude — XML bodies only | **5** |
+| **Open Redirect** | Absolute URLs or `//` in redirect / return / next / dest / goto params | **1** |
+| **Prototype Pollution** | `__proto__`, `constructor.prototype` — query, body, and nested JSON keys | **1** |
 | **CRLF / Header Injection** | HTTP response splitting, host-header injection | — |
 | **Rate Limiting** | Sliding-window per IP — configurable window, limit, and block duration. Pluggable store (Redis-ready) | — |
-| **IP Filter** | Blacklist + whitelist with CIDR notation — IPv4 and IPv6 | — |
-| **Bad Bot Blocking** | 69 blocked signatures: sqlmap, nikto, nmap, ffuf, nuclei, Shodan, wpscan, Metasploit, and more | — |
-| **HTTP Method Filter** | Rejects non-configured methods (TRACE, CONNECT, custom verbs) | — |
-| **Request Size Limit** | Content-Length header check + streamed byte guard | — |
-| **Security Headers** | HSTS, CSP, COOP, CORP, COEP, Referrer-Policy, Permissions-Policy, NEL, removes `X-Powered-By` | — |
+| **IP Filter** | Blacklist + whitelist with CIDR — IPv4 and IPv6 | — |
+| **Bad Bot Blocking** | 69 blocked signatures: sqlmap, nikto, nmap, ffuf, nuclei, Shodan, wpscan, Metasploit, Nessus… | — |
+| **HTTP Method Filter** | Rejects TRACE, CONNECT, and any non-configured verb | — |
+| **Request Size Limit** | `Content-Length` header check + streaming byte guard | — |
+| **Security Headers** | HSTS, CSP, COOP, CORP, COEP, Referrer-Policy, Permissions-Policy, NEL — `X-Powered-By` stripped | — |
 
-**Dual mode:** `mode: 'reject'` blocks requests · `mode: 'log-only'` logs without blocking (recommended for initial rollout)
+**Dual mode:** `mode: 'reject'` blocks · `mode: 'log-only'` audits without blocking *(recommended for first deploy)*
 
 ---
 
 ## Node.js — npm package
 
-### Install
+### Quick start
 
 ```bash
 npm install firewtwall
 ```
-
-### Quick start
 
 ```js
 const express = require('express');
@@ -89,7 +119,9 @@ app.get('/', (req, res) => res.json({ ok: true }));
 app.listen(3000);
 ```
 
-### With custom options
+---
+
+### All options
 
 ```js
 const { createWAF, setStore } = require('firewtwall');
@@ -97,18 +129,21 @@ const { createWAF, setStore } = require('firewtwall');
 app.use(...createWAF({
   mode: 'reject',              // 'reject' | 'log-only'
   rateLimit: {
-    windowMs: 60_000,          // 1-minute sliding window
-    maxRequests: 100,          // requests allowed per window per IP
+    windowMs:        60_000,   // 1-minute sliding window
+    maxRequests:     100,      // max requests per window per IP
     blockDurationMs: 600_000,  // 10-minute block after violation
   },
-  whitelist: ['127.0.0.1', '10.0.0.0/8'],  // bypass all checks
-  blacklist: ['203.0.113.0/24'],            // always block
-  bypassPaths: ['/health', '/metrics'],
-  trustedProxies: ['172.16.0.1'],          // enable X-Forwarded-For
-  logPath: './logs/waf.log',
-  responseType: 'json',        // 'json' | 'html'
+  whitelist:      ['127.0.0.1', '10.0.0.0/8'],  // bypass all checks
+  blacklist:      ['203.0.113.0/24'],            // always block
+  bypassPaths:    ['/health', '/metrics'],       // skip WAF entirely
+  trustedProxies: ['172.16.0.1'],               // honour X-Forwarded-For
+  logPath:        './logs/waf.log',             // NDJSON log
+  responseType:   'json',                       // 'json' | 'html'
+  debug:          false,                        // see Debug mode below
 }));
 ```
+
+---
 
 ### Debug mode
 
@@ -116,24 +151,24 @@ app.use(...createWAF({
 app.use(...createWAF({ debug: true }));
 ```
 
-When `debug: true` every request (pass **and** block) is fully traced:
+When `debug: true` every request — pass **and** block — is fully traced:
 
 | What changes | Detail |
-|--------------|--------|
-| **All requests logged** | Not just blocks — every request hits the NDJSON log with processing time |
-| **Response headers** | Four `X-WAF-*` headers are injected (see table below) |
-| **Log verbosity** | Matched value, decoded value, and the specific check that fired are included |
+|---|---|
+| **All requests logged** | Every request lands in the NDJSON log with processing time and checks run |
+| **X-WAF-\* response headers** | Four headers expose the outcome to the caller |
+| **Verbose log fields** | Raw matched value, decoded value, and exact rule name are included |
 
-**Response headers added in debug mode:**
+**Response headers in debug mode:**
 
-| Header | Example | Always? |
-|--------|---------|---------|
-| `X-WAF-RequestId` | `f47ac10b58cc1122` | ✅ |
-| `X-WAF-Result` | `blocked` or `passed` | ✅ |
-| `X-WAF-Rule` | `sql-union-select` | ❌ blocked only |
-| `X-WAF-Time` | `0.831ms` | ✅ |
+| Header | Example value | Present |
+|--------|--------------|---------|
+| `X-WAF-RequestId` | `f47ac10b58cc1122` | Always |
+| `X-WAF-Result` | `passed` or `blocked` | Always |
+| `X-WAF-Rule` | `sql-union-select` | Blocked only |
+| `X-WAF-Time` | `0.83ms` | Always |
 
-**Sample debug log entry (passed request):**
+**Passed request — log entry:**
 ```json
 {
   "timestamp": "2026-03-30T10:00:00Z",
@@ -143,11 +178,11 @@ When `debug: true` every request (pass **and** block) is fully traced:
   "path": "/",
   "result": "passed",
   "processingTimeMs": 0.42,
-  "checksRun": 11
+  "checksRun": 16
 }
 ```
 
-**Sample debug log entry (blocked request):**
+**Blocked request — log entry:**
 ```json
 {
   "timestamp": "2026-03-30T10:00:01Z",
@@ -166,20 +201,20 @@ When `debug: true` every request (pass **and** block) is fully traced:
 }
 ```
 
-**Debugging nmap scans:** nmap probes are caught by the **bot filter** (`nmap-scan` rule). To confirm in debug mode:
+**Catch nmap in debug mode:**
 ```bash
-# Run nmap against your dev server
+# Fire nmap at your dev server
 nmap -sV localhost -p 3000
 
-# Tail the WAF log — you'll see the blocked probe
+# See the blocked probe in the log
 npx waf-log --blocked --rule nmap
 ```
 
-> ⚠️ **Never enable `debug: true` in production** — it exposes internal rule names to the client via response headers.
+> ⚠️ **Never use `debug: true` in production** — it leaks internal rule names to the caller.
+
+---
 
 ### Log viewer CLI
-
-After installing the package a `waf-log` binary is available:
 
 ```bash
 # Last 50 entries (default)
@@ -188,7 +223,7 @@ npx waf-log
 # Last 100 entries from a custom log file
 npx waf-log --tail 100 ./logs/waf.log
 
-# Stats summary — top rules, top IPs, severity breakdown
+# Stats — top rules, top IPs, severity breakdown
 npx waf-log --stats
 
 # Only blocked requests
@@ -198,14 +233,18 @@ npx waf-log --blocked
 npx waf-log --ip 203.0.113.42
 npx waf-log --rule sql
 
-# Entries after a date
-npx waf-log --since 2026-03-29T12:00:00Z
+# Entries after a timestamp
+npx waf-log --since 2026-03-30T00:00:00Z
 
-# Raw NDJSON output (pipe-friendly)
+# Raw NDJSON — pipe-friendly
 npx waf-log --json | jq .
 ```
 
-### Swap the rate-limit store (Redis, multi-process deployments)
+---
+
+### Redis / multi-process
+
+Replace the built-in in-memory store with any key-value backend:
 
 ```js
 const { createWAF, setStore } = require('firewtwall');
@@ -214,7 +253,7 @@ const redis = require('ioredis');
 const client = new redis();
 
 setStore({
-  get: async (key)        => JSON.parse(await client.get(key)),
+  get: async (key)        => JSON.parse(await client.get(key) ?? 'null'),
   set: async (key, value) => client.set(key, JSON.stringify(value)),
   del: async (key)        => client.del(key),
 });
@@ -222,24 +261,47 @@ setStore({
 app.use(...createWAF());
 ```
 
+---
+
 ### Configuration reference
 
 | Key | Default | Description |
 |-----|---------|-------------|
 | `mode` | `'reject'` | `'reject'` blocks · `'log-only'` audits |
-| `allowedMethods` | `['GET','POST','PUT','PATCH','DELETE','OPTIONS','HEAD']` | Permitted HTTP methods |
-| `maxBodySize` | `10485760` | Max Content-Length in bytes (10 MB) |
-| `rateLimit.windowMs` | `60000` | Sliding-window size in ms |
+| `allowedMethods` | `['GET','POST','PUT','PATCH','DELETE','OPTIONS','HEAD']` | Permitted HTTP verbs |
+| `maxBodySize` | `10485760` | Max `Content-Length` in bytes (10 MB) |
+| `rateLimit.windowMs` | `60000` | Sliding-window duration in ms |
 | `rateLimit.maxRequests` | `100` | Requests allowed per window per IP |
 | `rateLimit.blockDurationMs` | `600000` | Block duration after violation |
 | `whitelist` | `[]` | IPs / CIDRs that bypass all checks |
 | `blacklist` | `[]` | IPs / CIDRs that are always blocked |
 | `bypassPaths` | `['/health','/ping']` | Paths that skip all WAF checks |
-| `trustedProxies` | `[]` | Enables `X-Forwarded-For` parsing |
+| `trustedProxies` | `[]` | Enable `X-Forwarded-For` parsing |
 | `logPath` | `'./logs/waf.log'` | NDJSON log file path |
-| `responseType` | `'json'` | Block response format: `'json'` or `'html'` |
+| `responseType` | `'json'` | Block response: `'json'` or `'html'` |
+| `debug` | `false` | Full request tracing + `X-WAF-*` headers |
 
-### Test it
+---
+
+### TypeScript
+
+Types ship with the package — no `@types/` install needed:
+
+```ts
+import { createWAF, setStore, WAFOptions, StoreAdapter } from 'firewtwall';
+
+const opts: WAFOptions = {
+  mode: 'reject',
+  debug: false,
+  blacklist: ['203.0.113.0/24'],
+};
+
+app.use(...createWAF(opts));
+```
+
+---
+
+### Test commands
 
 ```bash
 # SQL injection → 403
@@ -257,6 +319,26 @@ curl "http://localhost:3000/?cmd=|cat+/etc/passwd"
 # CRLF injection → 400
 curl -H $'X-Header: foo\r\nInjected: bar' http://localhost:3000/
 
+# SSRF — cloud metadata → 403
+curl "http://localhost:3000/?url=http://169.254.169.254/latest/meta-data"
+
+# SSRF — private IP → 403
+curl "http://localhost:3000/?redirect=http://192.168.1.1/admin"
+
+# XXE — external entity → 403  (send XML body)
+curl -X POST http://localhost:3000/upload \
+  -H "Content-Type: application/xml" \
+  -d '<?xml version="1.0"?><!DOCTYPE x [<!ENTITY xxe SYSTEM "file:///etc/passwd">]><x>&xxe;</x>'
+
+# Open redirect → 403
+curl "http://localhost:3000/login?returnUrl=//evil.com"
+
+# Prototype pollution → 403
+curl "http://localhost:3000/?__proto__[admin]=true"
+
+# Bad bot (nmap UA) → 403
+curl -A "nmap scripting engine" http://localhost:3000/
+
 # Clean request → 200
 curl http://localhost:3000/
 ```
@@ -268,11 +350,11 @@ curl http://localhost:3000/
 ### Requirements
 
 - PHP ≥ 8.0
-- APCu extension (optional — highly recommended; file-based fallback included)
+- APCu extension *(optional but recommended — file-based fallback included)*
 
 ### Installation
 
-**Option A — `php.ini`** (global):
+**Option A — `php.ini`** (server-wide):
 ```ini
 auto_prepend_file = /absolute/path/to/fireWTwall/php/waf.php
 ```
@@ -286,29 +368,35 @@ php_value auto_prepend_file "/absolute/path/to/fireWTwall/php/waf.php"
 ```php
 <?php
 require_once '/path/to/fireWTwall/php/waf.php';
-// Your application continues here
+// Your application starts here
 ```
+
+---
 
 ### Configuration (`php/config/waf.config.php`)
 
 ```php
+<?php
 return [
     'allowed_methods'   => ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'],
-    'max_body_size'     => 10 * 1024 * 1024,
+    'max_body_size'     => 10 * 1024 * 1024,   // 10 MB
     'rate_limit'        => [
         'window_sec'         => 60,
         'max_requests'       => 100,
         'block_duration_sec' => 600,
     ],
-    'whitelist'         => [],
-    'blacklist'         => [],
+    'whitelist'         => [],                  // IPs / CIDRs that bypass all checks
+    'blacklist'         => [],                  // IPs / CIDRs always blocked
     'bypass_paths'      => ['/health', '/ping'],
     'trusted_proxies'   => [],
-    'mode'              => 'reject',     // 'reject' or 'log-only'
+    'mode'              => 'reject',            // 'reject' | 'log-only'
     'log_path'          => __DIR__ . '/../logs/waf.log',
-    'response_type'     => 'json',       // 'json' or 'html'
+    'response_type'     => 'json',              // 'json' | 'html'
+    'debug'             => false,
 ];
 ```
+
+---
 
 ### Rate limiter storage
 
@@ -325,13 +413,52 @@ apc.enabled=1
 
 ---
 
+### Debug mode (PHP)
+
+Set `'debug' => true` in `waf.config.php`. The same `X-WAF-*` response headers and verbose NDJSON log entries as the Node.js version will be produced.
+
+> ⚠️ **Disable in production.** Debug mode exposes rule names to the client.
+
+---
+
+## Middleware pipeline
+
+Requests pass through **16 stages** (Node.js) / **15 stages** (PHP) in this order:
+
+```
+Request
+  │
+  ├─ 1  Security headers          → added to every response regardless of outcome
+  ├─ 2  Request size              → 413 if Content-Length exceeds limit
+  ├─ 3  HTTP method               → 405 if verb not in allowedMethods
+  ├─ 4  IP filter                 → whitelist bypasses everything; blacklist → 403
+  ├─ 5  Rate limiting             → 429 + Retry-After if window exceeded
+  ├─ 6  Bot detection             → 403 if User-Agent matches 69 blocked signatures
+  ├─ 7  Prototype pollution       → 403 (__proto__, constructor.prototype in keys)
+  ├─ 8  SSRF                      → 403 (private IPs, metadata, schemes in URL params)
+  ├─ 9  XXE                       → 403 (XML bodies with DOCTYPE / ENTITY)
+  ├─ 10 Open redirect             → 403 (absolute URL in redirect-style params)
+  ├─ 11 Header injection (CRLF)   → 400
+  ├─ 12 Path traversal            → 403 (18 rules)
+  ├─ 13 Command injection         → 403 (18 rules)
+  ├─ 14 SQL injection             → 403 (38 rules)
+  └─ 15 XSS                       → 403 (29 rules)
+        │
+        ▼
+    Application
+```
+
+All pattern-based checks (stages 12–15) scan: `query params` · `request body` · `URL path` · `cookies` · `headers`
+
+---
+
 ## Log format
 
 Every blocked request appends one NDJSON line to the log file:
 
 ```json
 {
-  "timestamp": "2026-03-29T15:30:00Z",
+  "timestamp": "2026-03-30T15:30:00Z",
   "requestId": "f47ac10b58cc1122",
   "ip": "203.0.113.42",
   "method": "GET",
@@ -346,7 +473,7 @@ Every blocked request appends one NDJSON line to the log file:
 
 **Severity levels:** `critical` · `high` · `medium`
 
-**Sources:** `query` · `body` · `path` · `cookies` · `user-agent` · `header:<name>`
+**Sources:** `query` · `body` · `path` · `cookie:<name>` · `user-agent` · `header:<name>`
 
 ---
 
@@ -354,13 +481,19 @@ Every blocked request appends one NDJSON line to the log file:
 
 | Header | Value |
 |--------|-------|
+| `Strict-Transport-Security` | `max-age=31536000; includeSubDomains; preload` |
+| `Content-Security-Policy` | `default-src 'self'; script-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'` |
 | `X-Content-Type-Options` | `nosniff` |
 | `X-Frame-Options` | `SAMEORIGIN` |
 | `X-XSS-Protection` | `1; mode=block` |
 | `Referrer-Policy` | `strict-origin-when-cross-origin` |
-| `Permissions-Policy` | `geolocation=(), microphone=(), camera=()` |
+| `Permissions-Policy` | `geolocation=(), microphone=(), camera=(), payment=(), usb=(), interest-cohort=()` |
 | `Cross-Origin-Opener-Policy` | `same-origin` |
 | `Cross-Origin-Resource-Policy` | `same-origin` |
+| `Cross-Origin-Embedder-Policy` | `require-corp` |
+| `X-Permitted-Cross-Domain-Policies` | `none` |
+| `NEL` | `{"report_to":"default","max_age":31536000,"include_subdomains":true}` |
+| `X-Powered-By` | *(removed)* |
 
 ---
 
@@ -368,68 +501,71 @@ Every blocked request appends one NDJSON line to the log file:
 
 ```
 fireWTwall/
-├── nodejs/                        ← Published as npm package "firewtwall"
-│   ├── waf.js                     ← Entry: createWAF(), setStore()
-│   ├── index.d.ts                 ← TypeScript definitions (v2.0.0)
+├── nodejs/                          ← npm package "firewtwall"
+│   ├── waf.js                       ← Entry: createWAF(), setStore()
+│   ├── index.d.ts                   ← TypeScript definitions
 │   ├── package.json
 │   ├── config/
 │   │   ├── waf.config.js
-│   │   └── bad-bots.json          ← 69 blocked signatures
-│   ├── middleware/                ← 16 independent middleware modules
-│   │   ├── securityHeaders.js     ← HSTS, CSP, NEL, removes X-Powered-By
+│   │   └── bad-bots.json            ← 69 blocked signatures
+│   ├── middleware/                  ← 16 independent middleware modules
+│   │   ├── securityHeaders.js       ← HSTS, CSP, NEL, removes X-Powered-By
 │   │   ├── requestSize.js
 │   │   ├── methodFilter.js
 │   │   ├── ipFilter.js
-│   │   ├── rateLimit.js           ← Pluggable store interface
+│   │   ├── rateLimit.js             ← Pluggable store interface
 │   │   ├── botFilter.js
-│   │   ├── prototypePollution.js  ← NEW: __proto__, constructor.prototype
-│   │   ├── ssrf.js                ← NEW: private IPs, cloud metadata, schemes
-│   │   ├── xxe.js                 ← NEW: DOCTYPE, ENTITY, XInclude
-│   │   ├── openRedirect.js        ← NEW: absolute URLs in redirect params
+│   │   ├── prototypePollution.js    ← __proto__, constructor.prototype
+│   │   ├── ssrf.js                  ← Private IPs, cloud metadata, URI schemes
+│   │   ├── xxe.js                   ← DOCTYPE, ENTITY, XInclude (XML bodies)
+│   │   ├── openRedirect.js          ← Absolute URLs in redirect params
 │   │   ├── headerInjection.js
-│   │   ├── pathTraversal.js       ← 18 rules (+ Windows, system32, /boot)
-│   │   ├── commandInjection.js    ← 18 rules (+ Python/Ruby/Perl/PHP/Node CLI)
-│   │   ├── sqlInjection.js        ← 38 rules (+ EXTRACTVALUE, GTID, EXP(~()))
-│   │   └── xss.js                 ← 29 rules (+ CSS @import, SVG animate)
-│   └── utils/
-│       ├── patternMatcher.js      ← Multi-pass decode + cookie scanning
-│       ├── ipUtils.js             ← IPv4 + IPv6 CIDR matching
-│       └── logger.js              ← Buffered NDJSON logger
+│   │   ├── pathTraversal.js         ← 18 rules
+│   │   ├── commandInjection.js      ← 18 rules
+│   │   ├── sqlInjection.js          ← 38 rules
+│   │   └── xss.js                   ← 29 rules
+│   ├── utils/
+│   │   ├── patternMatcher.js        ← Multi-pass decode + cookie scanning
+│   │   ├── ipUtils.js               ← IPv4 + IPv6 CIDR matching
+│   │   └── logger.js                ← Buffered NDJSON logger
+│   └── bin/
+│       └── waf-log.js               ← CLI log viewer
 │
-└── php/                           ← Drop-in PHP WAF
-    ├── waf.php                    ← Entry point (auto_prepend_file target)
+└── php/                             ← Drop-in PHP WAF
+    ├── waf.php                      ← Entry point (auto_prepend_file target)
     ├── composer.json
     ├── config/
     │   ├── waf.config.php
-    │   └── bad-bots.php           ← 69 blocked signatures
+    │   └── bad-bots.php             ← 69 blocked signatures
     └── src/
-        ├── WAF.php                ← 15-step pipeline
-        ├── Request.php            ← Double-encoding + Unicode decode
+        ├── WAF.php                  ← 15-step pipeline
+        ├── Request.php              ← Double-encoding + Unicode decode + cookies
         ├── IpFilter.php
-        ├── RateLimiter.php
-        ├── Logger.php
-        ├── Response.php           ← HSTS, CSP, removes X-Powered-By
+        ├── RateLimiter.php          ← APCu or file-based fallback
+        ├── Logger.php               ← NDJSON with flock
+        ├── Response.php             ← HSTS, CSP, removes X-Powered-By
         └── detectors/
-            ├── SqlInjectionDetector.php   ← 38 rules
-            ├── XssDetector.php            ← 29 rules
-            ├── PathTraversalDetector.php  ← 18 rules
+            ├── SqlInjectionDetector.php     ← 38 rules
+            ├── XssDetector.php              ← 29 rules
+            ├── PathTraversalDetector.php    ← 18 rules
             ├── CommandInjectionDetector.php ← 18 rules
             ├── HeaderInjectionDetector.php
             ├── BotDetector.php
-            ├── SsrfDetector.php           ← NEW
-            ├── XxeDetector.php            ← NEW
-            ├── OpenRedirectDetector.php   ← NEW
-            └── MassAssignmentDetector.php ← NEW
+            ├── SsrfDetector.php
+            ├── XxeDetector.php
+            ├── OpenRedirectDetector.php
+            └── MassAssignmentDetector.php
 ```
 
 ---
 
 ## Important notes
 
-- **Start with `log-only` mode** in production. Review logs for false positives before enabling `reject`.
-- The **`logs/` directory** must be writable by the web server but not web-accessible. The included `php/logs/.htaccess` handles this for Apache.
-- This WAF is a **defence-in-depth layer** — it does not replace parameterised queries, input validation, or proper output encoding in your application.
-- For multi-process Node.js deployments, replace the in-memory rate-limit store with Redis (see the Redis example above).
+- **Start with `log-only` mode** in production. Review logs for false positives before switching to `reject`.
+- The **`logs/` directory** must be writable by the web server but **not** web-accessible. The included `php/logs/.htaccess` handles this for Apache.
+- This WAF is a **defence-in-depth layer** — it does not replace parameterised queries, input validation, or proper output encoding in your application code.
+- For multi-process / multi-server Node.js deployments, swap the in-memory rate-limit store with Redis (see the [Redis example](#redis--multi-process) above).
+- The CSP header shipped by default is strict. If your app loads scripts or styles from external origins, tune `Content-Security-Policy` in the security-headers middleware before deploying.
 
 ---
 
@@ -445,16 +581,16 @@ MIT © [saarors](https://github.com/saarors)
 
 | | |
 |---|---|
-| **[saarors](https://github.com/saarors)** | Created fireWTwall from scratch — designed the architecture, wrote the detection rules for both the Node.js and PHP versions, built the npm package, and shipped every release. |
+| **[saarors](https://github.com/saarors)** | Created fireWTwall from scratch — designed the full architecture, wrote every detection rule for both the Node.js and PHP editions, built and published the npm package, and owns every release. |
 
 ### Contributors
 
-| Contributor | Commits | Lines added | Lines removed |
-|-------------|---------|-------------|---------------|
-| **[saarors](https://github.com/saarors)** | 9 | +3,696 | -403 |
-| claude (AI pair-programmer) | 6 | +3,473 | -201 |
+| Contributor | Role | Commits | Lines+ | Lines− |
+|-------------|------|--------:|-------:|-------:|
+| **[saarors](https://github.com/saarors)** | Author & lead developer | **#1** | **+3,696** | **-403** |
+| claude | AI pair-programmer | #2 | +3,473 | -201 |
 
-> **saarors** holds the #1 contributor spot by commits, lines added, and lines removed.
+> **saarors** is the #1 contributor by every metric.
 > All design decisions, architecture choices, and release ownership belong to **saarors**.
 
 [![GitHub](https://img.shields.io/badge/github-saarors%2FfireWTwall-181717?logo=github)](https://github.com/saarors/fireWTwall)

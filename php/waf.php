@@ -16,7 +16,12 @@ declare(strict_types=1);
 // ------------------------------------------------------------------ //
 // Autoload — Composer if available, otherwise built-in PSR-4 loader
 // ------------------------------------------------------------------ //
-$_waf_composer = __DIR__ . '/vendor/autoload.php';
+// Composer autoloader may be at repo root (installed via `composer require`)
+// or inside php/ (local `composer install` in php/ directory)
+$_waf_composer = file_exists(__DIR__ . '/../vendor/autoload.php')
+    ? __DIR__ . '/../vendor/autoload.php'
+    : __DIR__ . '/vendor/autoload.php';
+
 if (file_exists($_waf_composer)) {
     require_once $_waf_composer;
 } else {

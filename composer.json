@@ -39,12 +39,12 @@
   },
   "autoload": {
     "psr-4": {
-      "FireWTWall\\": "src/"
+      "FireWTWall\\": "php/src/"
     }
   },
   "autoload-dev": {
     "psr-4": {
-      "FireWTWall\\Tests\\": "tests/"
+      "FireWTWall\\Tests\\": "php/tests/"
     }
   },
   "minimum-stability": "stable",
@@ -54,6 +54,6 @@
     "sort-packages": true
   },
   "extra": {
-    "entrypoint": "waf.php"
+    "entrypoint": "php/waf.php"
   }
 }

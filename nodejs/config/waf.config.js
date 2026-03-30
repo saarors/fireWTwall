@@ -7,6 +7,35 @@ module.exports = {
   // Maximum Content-Length in bytes (default: 10 MB)
   maxBodySize: 10 * 1024 * 1024,
 
+  // DDoS protection
+  ddos: {
+    maxUrlLength:   2048,          // block requests with URL longer than this
+    maxHeaderCount: 100,           // block requests with more than this many headers
+    maxHeaderSize:  8192,          // block if any header value exceeds this (bytes)
+    burst: {
+      windowMs:        1_000,      // 1-second burst window
+      maxRequests:     20,         // max requests per IP per second
+      blockDurationMs: 60_000,     // 1-minute block after burst violation
+    },
+    global: {
+      windowMs:    1_000,          // global window
+      maxRequests: 500,            // total requests/second across all IPs
+    },
+    fingerprint: {
+      windowMs:        10_000,     // 10-second fingerprint window
+      maxRequests:     50,         // max same (IP+UA+path) hits
+      blockDurationMs: 60_000,
+    },
+    pathFlood: {
+      windowMs:    5_000,          // 5-second path flood window
+      maxRequests: 200,            // max hits on same path across all IPs
+    },
+    tarpit: {
+      enabled: false,              // delay repeat offenders instead of instant block
+      delayMs: 2_000,              // delay in ms
+    },
+  },
+
   // Rate limiting
   rateLimit: {
     windowMs: 60 * 1000,          // 1-minute sliding window

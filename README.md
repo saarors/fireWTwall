@@ -50,7 +50,16 @@ Both versions share the same rule sets, detection philosophy, and NDJSON log for
 ---
 
 
-## What's new in v2.1.0 — Metasploit-class protections
+## What's new in v2.2.0 — Enhanced bot & curl detection
+
+| | Area | Features |
+|--|------|----------|
+| 🤖 | **Enhanced Bot Blocking** | Now blocks **115+** signatures including curl, wget, python libs, HTTP clients |
+| 🛡️ | **Automation Detection** | Detects suspicious User-Agent patterns: curl, python-*, libcurl, HTTPClient, java, perl, ruby, scrapy |
+| 🔍 | **Zero False Positives** | Whitelist for legitimate crawlers (Google, Bing, Yandex, DuckDuckGo, etc.) |
+| ⚡ | **Performance** | Optimized regex patterns, cached config, minimal overhead |
+
+### v2.1.0 — Metasploit-class protections
 
 | | Area | CVEs / Metasploit modules covered |
 |--|------|----------------------------------|
@@ -87,7 +96,8 @@ Both versions share the same rule sets, detection philosophy, and NDJSON log for
 | **CRLF / Header Injection** | HTTP response splitting, host-header injection | — |
 | **Rate Limiting** | Sliding-window per IP — configurable window, limit, block duration. Redis-ready | — |
 | **IP Filter** | Blacklist + whitelist with CIDR — IPv4 and IPv6 | — |
-| **Bad Bot Blocking** | **97** blocked signatures: sqlmap, nmap, ffuf, nuclei, Metasploit (msf/), tplmap, ysoserial, Shodan… | — |
+| **Bad Bot Blocking** | **115+** blocked signatures: sqlmap, nmap, curl, wget, ffuf, nuclei, Metasploit (msf/), python-*, HTTP clients, libcurl, Postman, Insomnia… | — |
+| **Automation Detection** | Detects suspicious User-Agent patterns (curl, python, perl, ruby, java, libcurl, scrapy, mechanize) | — |
 | **HTTP Method Filter** | Rejects TRACE, CONNECT, and any non-configured verb | — |
 | **Request Size Limit** | `Content-Length` header check + streaming byte guard | — |
 | **Security Headers** | HSTS, CSP, COOP, CORP, COEP, Referrer-Policy, Permissions-Policy, NEL — `X-Powered-By` stripped | — |

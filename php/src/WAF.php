@@ -2,6 +2,7 @@
 
 namespace FireWTWall;
 
+use FireWTWall\DdosProtection;
 use FireWTWall\Detectors\SqlInjectionDetector;
 use FireWTWall\Detectors\XssDetector;
 use FireWTWall\Detectors\PathTraversalDetector;
@@ -60,6 +61,9 @@ class WAF
     {
         $ip   = $this->request->getIp();
         $path = $this->request->getPath();
+
+        // --- 0. DDoS protection (runs before bypass-path check) ---
+        DdosProtection::run($this->request, $this->config);
 
         // --- Bypass paths ---
         foreach ($this->config['bypass_paths'] as $bypassPath) {

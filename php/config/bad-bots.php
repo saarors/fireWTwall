@@ -11,7 +11,8 @@ return [
 		'DISCo', 'dotbot', 'EmailSiphon', 'EmailWolf', 'ExaBot',
 		'flicky', 'larbin', 'LeechFTP', 'Niki-Bot', 'PageGrabber',
 		'SurveyBot', 'webcollage', 'Webster', 'Zeus', 'zmeu',
-		'obot', 'psbot', 'python-requests/2', 'Go-http-client/1',
+		'obot', 'psbot', 'python-requests/2', 'python-urllib', 'python-httpx',
+		'Go-http-client/1',
 		// Fuzzing / scanning tools
 		'ffuf', 'nuclei', 'interactsh', 'wfuzz',
 		// Vulnerability scanners
@@ -31,6 +32,13 @@ return [
 		'grabber', 'uniscan', 'vega/', 'paros', 'websecurify', 'n-stealth',
 		'webinspect', 'ibm appscan', 'hp webinspect', 'dotdotpwn', 'jexboss',
 		'commix', 'tplmap', 'ysoserial', 'nabuu',
+		// CLI HTTP clients & tools
+		'curl', 'wget', 'lynx', 'elinks', 'w3m', 'fetch', 'telnet',
+		'nc', 'netcat', 'ncat', 'socat',
+		// API testing / development tools
+		'insomnia', 'postman', 'apigee', 'restclient', 'httpie', 'xh',
+		// Download managers
+		'aria2', 'axel', 'getright', 'flashget',
 	],
 	'allowed' => [
 		'Googlebot', 'Bingbot', 'Slurp', 'DuckDuckBot', 'Baiduspider',

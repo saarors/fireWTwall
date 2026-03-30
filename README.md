@@ -28,7 +28,7 @@ Both versions share the same rule sets, detection philosophy, and NDJSON log for
 
 ## Table of contents
 
-1. [What's new in v2.1.0](#whats-new-in-v200)
+1. [What's new in v2.1.0](#whats-new-in-v210)
 2. [Protections](#protections)
 3. [Node.js](#nodejs--npm-package)
    - [Quick start](#quick-start)

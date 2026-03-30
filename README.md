@@ -28,9 +28,8 @@ Both versions share the same rule sets, detection philosophy, and NDJSON log for
 
 ## Table of contents
 
-1. [What's new in v2.1.0](#What's-new-in-v2.1.0—Metasploit-class-protections)
-2. [Protections](#protections)
-3. [Node.js](#nodejs--npm-package)
+1. [Protections](#protections)
+2. [Node.js](#nodejs--npm-package)
    - [Quick start](#quick-start)
    - [All options](#all-options)
    - [Debug mode](#debug-mode)
@@ -39,17 +38,17 @@ Both versions share the same rule sets, detection philosophy, and NDJSON log for
    - [Configuration reference](#configuration-reference)
    - [TypeScript](#typescript)
    - [Test commands](#test-commands)
-4. [PHP](#php)
+3. [PHP](#php)
    - [Requirements & install](#requirements)
    - [Configuration](#configuration-phpconfigwafconfigphp)
    - [Rate limiter storage](#rate-limiter-storage)
    - [Debug mode (PHP)](#debug-mode-php)
-5. [Middleware pipeline](#middleware-pipeline)
-6. [Log format](#log-format)
-7. [Security headers](#security-headers-added-to-every-response)
-8. [Project structure](#project-structure)
-9. [Important notes](#important-notes)
-10. [License & credits](#license)
+4. [Middleware pipeline](#middleware-pipeline)
+5. [Log format](#log-format)
+6. [Security headers](#security-headers-added-to-every-response)
+7. [Project structure](#project-structure)
+8. [Important notes](#important-notes)
+9. [License & credits](#license)
 
 ---
 

@@ -1,16 +1,60 @@
 {
   "name": "saarors/firewtwall-php",
   "version": "2.1.0",
-  "description": "Zero-dependency PHP Web Application Firewall — auto_prepend_file middleware",
+  "description": "Zero-dependency PHP Web Application Firewall — drop-in auto_prepend_file middleware",
   "type": "library",
   "license": "MIT",
+  "authors": [
+    {
+      "name": "saarors",
+      "homepage": "https://github.com/saarors",
+      "role": "Lead Developer"
+    }
+  ],
+  "homepage": "https://github.com/saarors/fireWTwall",
+  "support": {
+    "issues": "https://github.com/saarors/fireWTwall/issues",
+    "source": "https://github.com/saarors/fireWTwall"
+  },
+  "keywords": [
+    "waf",
+    "firewall",
+    "security",
+    "php",
+    "middleware",
+    "sql-injection",
+    "xss",
+    "csrf",
+    "owasp",
+    "rate-limiting",
+    "bot-protection",
+    "log4shell",
+    "shellshock"
+  ],
   "require": {
     "php": ">=8.0"
+  },
+  "suggest": {
+    "ext-apcu": "Faster, atomic rate limiting shared across PHP-FPM workers",
+    "ext-intl": "Unicode NFKC normalization for advanced evasion detection"
   },
   "autoload": {
     "psr-4": {
       "FireWTWall\\": "src/"
     }
   },
-  "keywords": ["waf", "firewall", "security", "php", "middleware"]
+  "autoload-dev": {
+    "psr-4": {
+      "FireWTWall\\Tests\\": "tests/"
+    }
+  },
+  "minimum-stability": "stable",
+  "prefer-stable": true,
+  "config": {
+    "optimize-autoloader": true,
+    "sort-packages": true
+  },
+  "extra": {
+    "entrypoint": "waf.php"
+  }
 }

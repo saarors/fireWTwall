@@ -14,20 +14,26 @@
 declare(strict_types=1);
 
 // ------------------------------------------------------------------ //
-// Autoload all classes (no Composer required)
+// Autoload — Composer if available, otherwise built-in PSR-4 loader
 // ------------------------------------------------------------------ //
-spl_autoload_register(function (string $class): void {
-    // Map  FireWTWall\Foo\Bar  →  src/Foo/Bar.php
-    $prefix = 'FireWTWall\\';
-    if (strncmp($class, $prefix, strlen($prefix)) !== 0) return;
+$_waf_composer = __DIR__ . '/vendor/autoload.php';
+if (file_exists($_waf_composer)) {
+    require_once $_waf_composer;
+} else {
+    spl_autoload_register(function (string $class): void {
+        // Map  FireWTWall\Foo\Bar  →  src/Foo/Bar.php
+        $prefix = 'FireWTWall\\';
+        if (strncmp($class, $prefix, strlen($prefix)) !== 0) return;
 
-    $relative = str_replace('\\', DIRECTORY_SEPARATOR, substr($class, strlen($prefix)));
-    $file     = __DIR__ . DIRECTORY_SEPARATOR . 'src' . DIRECTORY_SEPARATOR . $relative . '.php';
+        $relative = str_replace('\\', DIRECTORY_SEPARATOR, substr($class, strlen($prefix)));
+        $file     = __DIR__ . DIRECTORY_SEPARATOR . 'src' . DIRECTORY_SEPARATOR . $relative . '.php';
 
-    if (file_exists($file)) {
-        require_once $file;
-    }
-});
+        if (file_exists($file)) {
+            require_once $file;
+        }
+    });
+}
+unset($_waf_composer);
 
 // ------------------------------------------------------------------ //
 // Load config & run

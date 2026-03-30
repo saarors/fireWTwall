@@ -18,7 +18,7 @@ Available as an **npm package** for Node.js, Bun, and Express — and as a drop-
 | Version | Runtime | Install | Package |
 |---------|---------|---------|---------|
 | **Node.js** | Node.js >= 16 | `npm install firewtwall` | [![npm](https://img.shields.io/npm/v/firewtwall)](https://www.npmjs.com/package/firewtwall) |
-| **Bun** | Bun >= 1.0.0 | `bun add firewtwall` | [![npm](https://img.shields.io/npm/v/firewtwall)](https://www.npmjs.com/package/firewtwall) |
+| **Bun** | Bun >= 1.0.0 | `bun add firewtwall` | [![bun](https://img.shields.io/bun/v/firewtwall)](https://www.npmjs.com/package/firewtwall) |
 | **PHP** | PHP >= 8.0 | `composer require saarors/firewtwall-php` | [![Packagist](https://img.shields.io/packagist/v/saarors/firewtwall-php)](https://packagist.org/packages/saarors/firewtwall-php) |
 
 All versions share the same rule sets, detection philosophy, and NDJSON log format.

@@ -28,7 +28,7 @@ Both versions share the same rule sets, detection philosophy, and NDJSON log for
 
 ## Table of contents
 
-1. [What's new in v2.0.0](#whats-new-in-v200)
+1. [What's new in v2.1.0](#whats-new-in-v200)
 2. [Protections](#protections)
 3. [Node.js](#nodejs--npm-package)
    - [Quick start](#quick-start)
@@ -53,6 +53,7 @@ Both versions share the same rule sets, detection philosophy, and NDJSON log for
 
 ---
 
+
 ## What's new in v2.1.0 — Metasploit-class protections
 
 | | Area | CVEs / Metasploit modules covered |
@@ -65,21 +66,6 @@ Both versions share the same rule sets, detection philosophy, and NDJSON log for
 | 🛡️ | **LDAP injection** (6 rules) | Filter bypass, parenthesis injection, null-byte, uid/admin wildcard, hex-encoded chars |
 | 🛡️ | **Deserialization** (7 rules) | PHP `O:N:` objects, Java `AC ED 00 05` (base64 + hex), Python pickle, node-serialize RCE |
 | 🤖 | **97 blocked bots** | Added: msf/, msfpayload, tplmap, ysoserial, jexboss, commix, dotdotpwn, xsser, beef-, and 20+ more |
-
-## What was new in v2.0.0
-
-| | Area | Detail |
-|--|------|--------|
-| 🛡️ | **SSRF detection** | Blocks private IPs, cloud metadata (`169.254.169.254`, Azure, GCP), dangerous URI schemes (`file://`, `gopher://`) in URL-bearing params |
-| 🛡️ | **XXE detection** | Catches `DOCTYPE`, `ENTITY SYSTEM/PUBLIC`, parameter entities, `<xi:include>` — activated on XML bodies only |
-| 🛡️ | **Open redirect** | Blocks absolute URLs and protocol-relative (`//`) values in redirect / return / next / dest params |
-| 🛡️ | **Prototype pollution** | Recursive JSON key scan for `__proto__`, `constructor.prototype` (Node.js) |
-| 🛡️ | **Mass assignment** | PHP equivalent — blocks `__destruct`, `__wakeup`, `_method`, `__class__` in input keys |
-| 📋 | **+40 detection rules** | SQL (+12), XSS (+8), Command injection (+8), Path traversal (+4) |
-| 🤖 | **69 blocked bots** | ffuf, gobuster, nuclei, interactsh, Shodan, Censys, Metasploit, Nessus, wpscan, droopescan, and 20+ more |
-| 🍪 | **Cookie scanning** | All detectors now inspect cookies — logged as `cookie:<name>` |
-| 🔒 | **Hardened headers** | HSTS, CSP, `X-Permitted-Cross-Domain-Policies`, NEL — `X-Powered-By` removed |
-| 📝 | **TypeScript types** | Full `index.d.ts` ships with the npm package |
 
 ---
 

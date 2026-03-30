@@ -4,6 +4,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D16-brightgreen)](https://nodejs.org)
 [![PHP](https://img.shields.io/badge/php-%3E%3D8.0-777BB4)](https://www.php.net)
+[![Author](https://img.shields.io/badge/author-saarors-blue)](https://github.com/saarors)
+
+> **Created and maintained by [saarors](https://github.com/saarors)**
 
 A production-ready **Web Application Firewall (WAF)** with **zero external runtime dependencies**, available as an **npm package** for Node.js/Express and as a drop-in **PHP auto-prepend file**.
 
@@ -90,18 +93,66 @@ app.use(...createWAF({
 app.use(...createWAF({ debug: true }));
 ```
 
-When `debug: true`:
-- Every request (pass **and** block) is logged with timing
-- Every response gets `X-WAF-*` headers:
+When `debug: true` every request (pass **and** block) is fully traced:
 
-| Header | Example value |
-|--------|--------------|
-| `X-WAF-RequestId` | `f47ac10b58cc1122` |
-| `X-WAF-Result` | `blocked` or `passed` |
-| `X-WAF-Rule` | `sql-union-select` (blocked only) |
-| `X-WAF-Time` | `0.831ms` |
+| What changes | Detail |
+|--------------|--------|
+| **All requests logged** | Not just blocks — every request hits the NDJSON log with processing time |
+| **Response headers** | Four `X-WAF-*` headers are injected (see table below) |
+| **Log verbosity** | Matched value, decoded value, and the specific check that fired are included |
 
-> **Never enable `debug: true` in production** — it exposes rule names to the client.
+**Response headers added in debug mode:**
+
+| Header | Example | Always? |
+|--------|---------|---------|
+| `X-WAF-RequestId` | `f47ac10b58cc1122` | ✅ |
+| `X-WAF-Result` | `blocked` or `passed` | ✅ |
+| `X-WAF-Rule` | `sql-union-select` | ❌ blocked only |
+| `X-WAF-Time` | `0.831ms` | ✅ |
+
+**Sample debug log entry (passed request):**
+```json
+{
+  "timestamp": "2026-03-30T10:00:00Z",
+  "requestId": "f47ac10b58cc1122",
+  "ip": "127.0.0.1",
+  "method": "GET",
+  "path": "/",
+  "result": "passed",
+  "processingTimeMs": 0.42,
+  "checksRun": 11
+}
+```
+
+**Sample debug log entry (blocked request):**
+```json
+{
+  "timestamp": "2026-03-30T10:00:01Z",
+  "requestId": "a1b2c3d4e5f6a7b8",
+  "ip": "203.0.113.42",
+  "method": "GET",
+  "path": "/search",
+  "result": "blocked",
+  "rule": "sql-union-select",
+  "matched": "UNION SELECT",
+  "decoded": "UNION SELECT",
+  "source": "query",
+  "severity": "critical",
+  "processingTimeMs": 0.83,
+  "userAgent": "sqlmap/1.7"
+}
+```
+
+**Debugging nmap scans:** nmap probes are caught by the **bot filter** (`nmap-scan` rule). To confirm in debug mode:
+```bash
+# Run nmap against your dev server
+nmap -sV localhost -p 3000
+
+# Tail the WAF log — you'll see the blocked probe
+npx waf-log --blocked --rule nmap
+```
+
+> ⚠️ **Never enable `debug: true` in production** — it exposes internal rule names to the client via response headers.
 
 ### Log viewer CLI
 
@@ -352,4 +403,27 @@ fireWTwall/
 
 ## License
 
-MIT
+MIT © [saarors](https://github.com/saarors)
+
+---
+
+## Credits
+
+### Author & lead developer
+
+| | |
+|---|---|
+| **[saarors](https://github.com/saarors)** | Created fireWTwall from scratch — designed the architecture, wrote the detection rules for both the Node.js and PHP versions, built the npm package, and shipped every release. |
+
+### Contributors
+
+| Contributor | Commits | Lines added | Lines removed |
+|-------------|---------|-------------|---------------|
+| **[saarors](https://github.com/saarors)** | 9 | +3,696 | -403 |
+| claude (AI pair-programmer) | 6 | +3,473 | -201 |
+
+> **saarors** holds the #1 contributor spot by commits, lines added, and lines removed.
+> All design decisions, architecture choices, and release ownership belong to **saarors**.
+
+[![GitHub](https://img.shields.io/badge/github-saarors%2FfireWTwall-181717?logo=github)](https://github.com/saarors/fireWTwall)
+[![npm](https://img.shields.io/badge/npm-firewtwall-CB3837?logo=npm)](https://www.npmjs.com/package/firewtwall)

@@ -28,9 +28,8 @@ Both versions share the same rule sets, detection philosophy, and NDJSON log for
 
 ## Table of contents
 
-1. [What's new in v2.0.0](#whats-new-in-v200)
-2. [Protections](#protections)
-3. [Node.js](#nodejs--npm-package)
+1. [Protections](#protections)
+2. [Node.js](#nodejs--npm-package)
    - [Quick start](#quick-start)
    - [All options](#all-options)
    - [Debug mode](#debug-mode)
@@ -39,19 +38,20 @@ Both versions share the same rule sets, detection philosophy, and NDJSON log for
    - [Configuration reference](#configuration-reference)
    - [TypeScript](#typescript)
    - [Test commands](#test-commands)
-4. [PHP](#php)
+3. [PHP](#php)
    - [Requirements & install](#requirements)
    - [Configuration](#configuration-phpconfigwafconfigphp)
    - [Rate limiter storage](#rate-limiter-storage)
    - [Debug mode (PHP)](#debug-mode-php)
-5. [Middleware pipeline](#middleware-pipeline)
-6. [Log format](#log-format)
-7. [Security headers](#security-headers-added-to-every-response)
-8. [Project structure](#project-structure)
-9. [Important notes](#important-notes)
-10. [License & credits](#license)
+4. [Middleware pipeline](#middleware-pipeline)
+5. [Log format](#log-format)
+6. [Security headers](#security-headers-added-to-every-response)
+7. [Project structure](#project-structure)
+8. [Important notes](#important-notes)
+9. [License & credits](#license)
 
 ---
+
 
 ## What's new in v2.1.0 — Metasploit-class protections
 
@@ -65,21 +65,6 @@ Both versions share the same rule sets, detection philosophy, and NDJSON log for
 | 🛡️ | **LDAP injection** (6 rules) | Filter bypass, parenthesis injection, null-byte, uid/admin wildcard, hex-encoded chars |
 | 🛡️ | **Deserialization** (7 rules) | PHP `O:N:` objects, Java `AC ED 00 05` (base64 + hex), Python pickle, node-serialize RCE |
 | 🤖 | **97 blocked bots** | Added: msf/, msfpayload, tplmap, ysoserial, jexboss, commix, dotdotpwn, xsser, beef-, and 20+ more |
-
-## What was new in v2.0.0
-
-| | Area | Detail |
-|--|------|--------|
-| 🛡️ | **SSRF detection** | Blocks private IPs, cloud metadata (`169.254.169.254`, Azure, GCP), dangerous URI schemes (`file://`, `gopher://`) in URL-bearing params |
-| 🛡️ | **XXE detection** | Catches `DOCTYPE`, `ENTITY SYSTEM/PUBLIC`, parameter entities, `<xi:include>` — activated on XML bodies only |
-| 🛡️ | **Open redirect** | Blocks absolute URLs and protocol-relative (`//`) values in redirect / return / next / dest params |
-| 🛡️ | **Prototype pollution** | Recursive JSON key scan for `__proto__`, `constructor.prototype` (Node.js) |
-| 🛡️ | **Mass assignment** | PHP equivalent — blocks `__destruct`, `__wakeup`, `_method`, `__class__` in input keys |
-| 📋 | **+40 detection rules** | SQL (+12), XSS (+8), Command injection (+8), Path traversal (+4) |
-| 🤖 | **69 blocked bots** | ffuf, gobuster, nuclei, interactsh, Shodan, Censys, Metasploit, Nessus, wpscan, droopescan, and 20+ more |
-| 🍪 | **Cookie scanning** | All detectors now inspect cookies — logged as `cookie:<name>` |
-| 🔒 | **Hardened headers** | HSTS, CSP, `X-Permitted-Cross-Domain-Policies`, NEL — `X-Powered-By` removed |
-| 📝 | **TypeScript types** | Full `index.d.ts` ships with the npm package |
 
 ---
 

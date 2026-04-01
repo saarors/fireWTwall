@@ -67,4 +67,36 @@ module.exports = {
   // Debug mode: log every request (pass + block) and add X-WAF-* response headers.
   // Never enable in production — exposes internal rule names in headers.
   debug: false,
+
+  // Entropy scanner — Shannon entropy analysis of parameter values
+  entropy: {
+    minLength:           20,  // minimum value length to analyse
+    shellcodeThreshold:  6.8, // entropy > this → near-random (shellcode / binary)
+    encodedThreshold:    5.5, // entropy > this over len > 50 → multi-encoded payload
+    b64Threshold:        5.9, // entropy > this over len > 80 in b64 alphabet → encoded payload
+  },
+
+  // Heuristic engine — structural zero-day detection
+  heuristic: {
+    encodingMixThreshold:    3,  // distinct encoding types in one value → critical
+    nestingDepthThreshold:   6,  // bracket nesting depth → high
+    keywordDensityThreshold: 3,  // attack keywords per 100 chars → high
+    operatorStormThreshold:  15, // attack operators per 100 chars → high
+  },
+
+  // Mutation tracker — payload fuzzing / variant detection
+  mutation: {
+    windowMs:             60_000, // sliding window for unique-variant counting (1 minute)
+    maxVariants:          5,      // unique variants within window before alert
+    levenshteinThreshold: 10,     // avg edit distance below this = "similar" payloads
+    replayThreshold:      10,     // exact fingerprint replays before alert
+  },
+
+  // Request rhythm — bot/scanner timing-pattern detection
+  rhythm: {
+    sampleSize:             10, // requests needed before timing analysis begins
+    machineStddevThreshold: 50, // stddev below this (ms) = machine-regular traffic
+    burstWindowMs:          200, // all sampleSize requests within this window = burst
+    lowSlowJitterMs:        10, // interval jitter tolerance for 1-second cron detection
+  },
 };

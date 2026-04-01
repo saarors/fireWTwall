@@ -1,0 +1,17 @@
+name: Sync Packagist
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Ping Packagist to pull latest version
+        run: |
+          curl -XPOST -H 'content-type:application/json' \
+            'https://packagist.org/api/update-package?username=saarors&apiToken=${{ secrets.PACKAGIST_TOKEN }}' \
+            -d '{"repository":{"url":"https://github.com/saarors/fireWTwall"}}'

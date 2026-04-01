@@ -53,14 +53,17 @@ All versions share the same rule sets, detection philosophy, and NDJSON log form
 ---
 
 
-## What's new in v2.2.0 — Enhanced bot & curl detection
+## What's new in v2.3.1 — Next-gen original detection layers
 
-| | Area | Features |
-|--|------|----------|
-| 🤖 | **Enhanced Bot Blocking** | Now blocks **115+** signatures including curl, wget, python libs, HTTP clients |
-| 🛡️ | **Automation Detection** | Detects suspicious User-Agent patterns: curl, python-*, libcurl, HTTPClient, java, perl, ruby, scrapy |
-| 🔍 | **Zero False Positives** | Whitelist for legitimate crawlers (Google, Bing, Yandex, DuckDuckGo, etc.) |
-| ⚡ | **Performance** | Optimized regex patterns, cached config, minimal overhead |
+| | Layer | How it works |
+|--|-------|-------------|
+| 📊 | **Entropy Scanner** | Shannon entropy (H = -Σ p·log₂p) on every param — catches shellcode, multi-encoded payloads and base64 bombs with zero signatures |
+| 🧠 | **Heuristic Engine** | Structural zero-day detection — encoding mix density, bracket nesting depth, keyword-per-char ratio, function chain depth, operator storms, polyglot payloads |
+| 🔗 | **Multi-Vector Correlation** | Catches attacks **split across 3+ parameters** that are individually harmless but dangerous together |
+| 🔄 | **Mutation Tracker** | Levenshtein distance tracking per IP — detects payload fuzzing / WAF bypass attempts in real time |
+| 🏷️ | **Semantic Type Check** | 80+ param names with known types — if `id=` contains `<script>` or `page=` contains SQL, it fires |
+| ⏱️ | **Request Rhythm** | Timing analysis — detects machine-regular bots (stddev < 50ms), burst scanners, and low-and-slow cron scanners |
+| 🛡️ | **DDoS Protection** | Burst limiter, global flood guard, fingerprint flood, path flood, URL/header size guards, optional tarpitting |
 
 ---
 

@@ -929,14 +929,7 @@ MIT © [saarors](https://github.com/saarors)
 |---|---|
 | **[saarors](https://github.com/saarors)** | Created fireWTwall from scratch — designed the full architecture, wrote every detection rule for both the Node.js and PHP editions, built and published the npm package, and owns every release. |
 
-### Contributors
 
-| Contributor | Role | Commits | Lines+ | Lines− |
-|-------------|------|--------:|-------:|-------:|
-| **[saarors](https://github.com/saarors)** [![GitHub](https://img.shields.io/badge/github-saarors-181717?logo=github)](https://github.com/saarors) | Author & lead developer | **#1** | **+3,696** | **-403** |
-| claude | AI pair-programmer | #2 | +3,473 | -201 |
-
-> **saarors** is the #1 contributor by every metric.
 > All design decisions, architecture choices, and release ownership belong to **saarors**.
 
 [![GitHub](https://img.shields.io/badge/github-saarors%2FfireWTwall-181717?logo=github)](https://github.com/saarors/fireWTwall)

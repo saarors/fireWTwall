@@ -37,6 +37,14 @@ A production-ready Web Application Firewall with zero external runtime dependenc
 | [php/rate-limiter.md](php/rate-limiter.md) | APCu vs file-based rate limiting: how each works, setup, shared hosting |
 | [php/debug-mode.md](php/debug-mode.md) | PHP debug mode: headers, log verbosity, production warning |
 
+### ASP.NET (.aspx)
+
+| File | Description |
+|------|-------------|
+| [aspnet/installation.md](aspnet/installation.md) | Full install guide: source copy, class library, Web.config registration |
+| [aspnet/configuration.md](aspnet/configuration.md) | Every WafConfig property documented with type, default, and examples |
+| [aspnet/debug-mode.md](aspnet/debug-mode.md) | Debug mode: X-WAF-* headers, log verbosity, PowerShell log viewer |
+
 ### Detection rules
 
 | File | Description |

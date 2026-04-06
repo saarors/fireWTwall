@@ -55,6 +55,38 @@ This fires the WAF before every PHP script on the server without changing any ap
 
 ---
 
+## ASP.NET (.aspx) — minimal setup
+
+**Step 1 — Copy source files.**
+Copy the `aspnet/src/` directory into your project (e.g. `App_Code/FireWTWall/` or a class library).
+
+**Step 2 — Register the HttpModule in `Web.config`:**
+
+```xml
+<system.webServer>
+  <modules>
+    <add name="FireWTWallModule" type="FireWTWall.WafHttpModule" />
+  </modules>
+</system.webServer>
+```
+
+That's it. The WAF now runs before every `.aspx` page, MVC controller, and handler in your application.
+
+**Step 3 — Optionally tune settings in `Global.asax.cs`:**
+
+```csharp
+protected void Application_Start(object sender, EventArgs e)
+{
+    WafConfig.Current.Mode         = "log-only"; // start in audit mode
+    WafConfig.Current.ResponseType = "json";     // or "html"
+    WafConfig.Current.RateLimit.MaxRequests = 200;
+}
+```
+
+See [aspnet/installation.md](aspnet/installation.md) for the full install guide and [aspnet/configuration.md](aspnet/configuration.md) for all settings.
+
+---
+
 ## Verify it works
 
 Start your server, then run:
@@ -82,5 +114,7 @@ npx waf-log --blocked
 
 - [nodejs/configuration.md](nodejs/configuration.md) — tune mode, rate limits, whitelists, and more
 - [nodejs/debug-mode.md](nodejs/debug-mode.md) — enable full request tracing for development
+- [aspnet/configuration.md](aspnet/configuration.md) — all ASP.NET WafConfig properties
+- [aspnet/debug-mode.md](aspnet/debug-mode.md) — X-WAF-* headers and PowerShell log viewer
 - [log-format.md](log-format.md) — understand every field in the log
 - [false-positives.md](false-positives.md) — what to do if a legitimate request is blocked

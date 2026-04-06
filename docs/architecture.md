@@ -119,17 +119,17 @@ Both IPv4 and IPv6 addresses are supported in `whitelist`, `blacklist`, and `tru
 
 ---
 
-## Node.js vs PHP — architectural differences
+## Runtime architectural differences
 
-| Aspect | Node.js | PHP |
-|--------|---------|-----|
-| Entry point | `createWAF()` returns middleware array | `waf.php` auto-prepend executes on every request |
-| Request lifecycle | Express middleware chain | Sequential PHP function calls in `WAF.php` |
-| Pattern matching | `patternMatcher.js` — `deepDecode()` + `scanSources()` | `Request.php` — same logic in PHP |
-| Rate limit store | Pluggable: in-memory Map or custom (Redis) | APCu shared memory or file-based fallback |
-| Concurrent writes | Node.js event loop (single thread, no locking needed) | `flock()` exclusive lock per log write |
-| Configuration | `waf.config.js` (JS object) + `createWAF(options)` overrides | `waf.config.php` (PHP array, no runtime override) |
-| Debug headers | Added by `debug.js` middleware | Added by `WAF.php` before response exits |
-| Bot list | `config/bad-bots.json` | `config/bad-bots.php` |
-| Pipeline stages | 23 (includes debug stage 0) | 22 |
-| TypeScript | `index.d.ts` bundled | Not applicable |
+| Aspect | Node.js | PHP | ASP.NET | ASP.NET Core | Python |
+|--------|---------|-----|---------|-------------|--------|
+| Entry point | `createWAF()` returns middleware array | `waf.php` auto-prepend | `WafHttpModule` registered in `Web.config` | `app.UseFireWTWall()` in `Program.cs` | WSGI middleware / Django / Flask |
+| Request lifecycle | Express middleware chain | Sequential calls in `WAF.php` | `IHttpModule.BeginRequest` event | `RequestDelegate` async pipeline | WSGI `__call__` / Django `__call__` |
+| Pattern matching | `patternMatcher.js` `deepDecode()` | `Request::deepDecode()` | `WafRequest.DeepDecode()` | `WafRequest.DeepDecode()` | `WafRequest.deep_decode()` |
+| Rate limit store | Pluggable: in-memory Map or Redis | APCu or file-based fallback | `System.Runtime.Caching.MemoryCache` | `IMemoryCache` (DI) | `threading.Lock` + dict; optional Redis |
+| Concurrent writes | Single-threaded event loop | `flock()` exclusive lock | `lock` + `File.AppendAllText` | `SemaphoreSlim` async lock | `threading.Lock` |
+| Configuration | `waf.config.js` + `createWAF(options)` | `waf.config.php` | `WafConfig.Current` singleton | `IOptions<WafOptions>` via DI | `WafConfig` dataclass / Django settings |
+| Debug headers | `debug.js` middleware | `WAF.php` | `WAF.cs` | `WafMiddleware.cs` | `WAF.py` |
+| Bot list | `config/bad-bots.json` | `config/bad-bots.php` | `WafHttpModule.cs` (inline) | `WafMiddleware.cs` (inline) | `config/bad_bots.json` |
+| Pipeline stages | 23 | 22 | 17+DDoS | 17+DDoS | 17+DDoS |
+| Language version | Node >= 16 | PHP >= 8.0 | .NET Framework 4.7.2+ | .NET 6+ | Python >= 3.9 |

@@ -18,6 +18,26 @@ app.use(...createWAF({ mode: 'log-only' }));
 'mode' => 'log-only',
 ```
 
+**ASP.NET (`Global.asax.cs`):**
+```csharp
+WafConfig.Current.Mode = "log-only";
+```
+
+**ASP.NET Core (`Program.cs`):**
+```csharp
+builder.Services.AddFireWTWall(o => o.Mode = "log-only");
+```
+
+**Python (Django `settings.py`):**
+```python
+FIREWTWALL = { "mode": "log-only" }
+```
+
+**Python (Flask):**
+```python
+waf = FlaskWaf(app, config=WafConfig(mode="log-only"))
+```
+
 In `log-only` mode, every potentially malicious request is logged but not blocked. This lets you audit traffic and find false positives without affecting users.
 
 ---
@@ -78,7 +98,23 @@ app.use(...createWAF({
 'bypass_paths' => ['/health', '/api/code-editor', '/docs/sql'],
 ```
 
-`bypassPaths` is an exact match on the URL path. The WAF does not evaluate any rules for these paths — no rate limiting, no logging, no rule checks.
+**ASP.NET:**
+```csharp
+WafConfig.Current.BypassPaths = new[] { "/health", "/api/code-editor", "/docs/sql" };
+```
+
+**ASP.NET Core:**
+```csharp
+builder.Services.AddFireWTWall(o =>
+    o.BypassPaths = new[] { "/health", "/api/code-editor", "/docs/sql" });
+```
+
+**Python:**
+```python
+FIREWTWALL = { "bypass_paths": ["/health", "/api/code-editor", "/docs/sql"] }
+```
+
+`bypassPaths` / `bypass_paths` / `BypassPaths` is a prefix match on the URL path. The WAF does not evaluate any rules for these paths.
 
 ### Option C — Whitelist trusted IPs
 
@@ -94,6 +130,22 @@ app.use(...createWAF({
 **PHP:**
 ```php
 'whitelist' => ['10.0.0.0/8', '172.16.0.0/12'],
+```
+
+**ASP.NET:**
+```csharp
+WafConfig.Current.Whitelist = new[] { "10.0.0.0/8", "172.16.0.0/12" };
+```
+
+**ASP.NET Core:**
+```csharp
+builder.Services.AddFireWTWall(o =>
+    o.Whitelist = new[] { "10.0.0.0/8", "172.16.0.0/12" });
+```
+
+**Python:**
+```python
+FIREWTWALL = { "whitelist": ["10.0.0.0/8", "172.16.0.0/12"] }
 ```
 
 Whitelisted IPs bypass all WAF checks.

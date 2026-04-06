@@ -2,6 +2,42 @@
 
 ---
 
+## v2.4.0
+
+**Python (WSGI/Django/Flask) and ASP.NET Core (.NET 6+) runtimes added. Automated tests. CI/CD.**
+
+### New runtimes
+
+| Runtime | Entry point | Install |
+|---------|-------------|---------|
+| **Python** | WSGI middleware + Django + Flask integrations | `pip install firewtwall` *(coming soon)* |
+| **ASP.NET Core** | `IMiddleware` — `app.UseFireWTWall()` | NuGet `FireWTWall.AspNetCore` *(coming soon)* |
+
+All 17 detectors, rate limiting, DDoS protection, IP filter, and bot detection are fully ported to both runtimes. Same NDJSON log format as Node.js and PHP.
+
+### Other changes
+
+- `CONTRIBUTING.md` added to repo root
+- `docs/aspnet/` — full ASP.NET (.aspx / Web Forms) documentation
+- `docs/architecture.md` updated with 5-runtime comparison table
+- `docs/false-positives.md` updated with per-runtime bypass examples
+- GitHub Actions CI added (Node.js, PHP, Python, ASP.NET Core)
+- `tests/` — shared attack payload suite + per-runtime test runners
+
+---
+
+## v2.3.2
+
+**ASP.NET (.aspx / Web Forms) runtime added.**
+
+- Full port of all 17 detectors to C# targeting .NET Framework 4.7.2+
+- `WafHttpModule` — drop-in `IHttpModule` registered via `Web.config`
+- `WafConfig` singleton configured in `Global.asax.cs Application_Start`
+- `MemoryCache`-backed rate limiter and DDoS protection (replaces APCu)
+- `docs/aspnet/` — installation, configuration, and debug-mode guides
+
+---
+
 ## v2.1.2
 
 **PSR-4 autoloading fix; Packagist published.**

@@ -1,99 +1,96 @@
 'use strict';
 
 const { extractIp } = require('../utils/ipUtils');
-const { logBlock }  = require('../utils/logger');
+const { logBlock } = require('../utils/logger');
 
-// ---------------------------------------------------------------------------
-// In-memory stores (per-process; swap with Redis adapters for multi-node)
-// ---------------------------------------------------------------------------
+// -----------------------------------------------------
+// Simple LRU helper (no dependency)
+// -----------------------------------------------------
+class LRU {
+  constructor(limit = 5000) {
+    this.limit = limit;
+    this.map = new Map();
+  }
 
-/** Per-IP burst store: Map<ip, { count, windowStart, blockedUntil, blockCount }> */
-const burstStore = new Map();
+  get(key) {
+    const val = this.map.get(key);
+    if (!val) return null;
+    this.map.delete(key);
+    this.map.set(key, val);
+    return val;
+  }
 
-/** Per-fingerprint store: Map<fp, { count, windowStart, blockedUntil }> */
-const fpStore = new Map();
+  set(key, value) {
+    if (this.map.has(key)) this.map.delete(key);
+    this.map.set(key, value);
 
-/** Per-path store: Map<path, { count, windowStart }> */
-const pathStore = new Map();
+    if (this.map.size > this.limit) {
+      const firstKey = this.map.keys().next().value;
+      this.map.delete(firstKey);
+    }
+  }
 
-/** Global counter: { count, windowStart } */
-const globalCounter = { count: 0, windowStart: Date.now() };
+  delete(key) {
+    this.map.delete(key);
+  }
+}
 
-// ---------------------------------------------------------------------------
-// Memory cleanup — runs every 60 seconds
-// ---------------------------------------------------------------------------
-const _cleanupTimer = setInterval(() => {
+// -----------------------------------------------------
+// Stores
+// -----------------------------------------------------
+const burstStore = new Map();        // per-IP
+const fpStore = new Map();           // fingerprint
+const pathStore = new LRU(5000);     // prevent memory explosion
+
+const globalCounter = {
+  count: 0,
+  windowStart: Date.now(),
+};
+
+// -----------------------------------------------------
+// Cleanup
+// -----------------------------------------------------
+setInterval(() => {
   const now = Date.now();
 
-  for (const [key, entry] of burstStore) {
-    const expired   = now > entry.windowStart + 120_000;
-    const unblocked = !entry.blockedUntil || now > entry.blockedUntil;
-    if (expired && unblocked) burstStore.delete(key);
+  for (const [k, v] of burstStore) {
+    if (v.blockedUntil && now < v.blockedUntil) continue;
+    if (now - v.windowStart > 120_000) burstStore.delete(k);
   }
 
-  for (const [key, entry] of fpStore) {
-    const expired   = now > entry.windowStart + 120_000;
-    const unblocked = !entry.blockedUntil || now > entry.blockedUntil;
-    if (expired && unblocked) fpStore.delete(key);
+  for (const [k, v] of fpStore) {
+    if (v.blockedUntil && now < v.blockedUntil) continue;
+    if (now - v.windowStart > 120_000) fpStore.delete(k);
   }
 
-  for (const [key, entry] of pathStore) {
-    if (now > entry.windowStart + 60_000) pathStore.delete(key);
-  }
-
-  // Reset global counter if its window has expired
-  // (it self-resets on each request; this just clears stale state)
-  if (now > globalCounter.windowStart + 60_000) {
-    globalCounter.count       = 0;
+  if (now - globalCounter.windowStart > 60_000) {
+    globalCounter.count = 0;
     globalCounter.windowStart = now;
   }
-}, 60_000);
+}, 60_000).unref?.();
 
-// Allow the Node.js process to exit normally even if this timer is active.
-_cleanupTimer.unref?.();
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/**
- * Send a block response or pass through in log-only mode.
- *
- * @param {object}   opts
- * @param {object}   opts.config
- * @param {object}   opts.req
- * @param {object}   opts.res
- * @param {Function} opts.next
- * @param {string}   opts.ip
- * @param {string}   opts.rule
- * @param {string}   opts.severity
- * @param {number}   opts.status        HTTP status code
- * @param {string}   opts.message       Human-readable message
- * @param {number}   [opts.retryAfter]  Seconds for Retry-After header
- * @returns {boolean}  true if the request was blocked (caller should return)
- */
-function block(opts) {
-  const { config, req, res, next, ip, rule, severity, status, message } = opts;
-
+// -----------------------------------------------------
+// Block helper
+// -----------------------------------------------------
+function block({ config, req, res, next, ip, rule, severity, status, message }) {
   logBlock({
-    logPath:   config.logPath,
+    logPath: config.logPath,
     requestId: res.wafRequestId,
     ip,
-    method:    req.method,
-    path:      req.path,
+    method: req.method,
+    path: req.path,
     rule,
     severity,
-    source:    'ddos',
+    source: 'ddos',
     userAgent: req.headers['user-agent'] || '',
   });
 
   if (config.mode === 'log-only') {
-    next();
-    return true; // "handled" — caller must return
+    return next(), true;
   }
 
-  if (status === 429) res.set('Retry-After', '60');
-  if (status === 503) res.set('Retry-After', '5');
+  const retryAfter = status === 429 ? '60' : status === 503 ? '5' : undefined;
+  if (retryAfter) res.set('Retry-After', retryAfter);
 
   res.status(status).json({
     blocked: true,
@@ -104,245 +101,227 @@ function block(opts) {
   return true;
 }
 
-// ---------------------------------------------------------------------------
-// Middleware factory
-// ---------------------------------------------------------------------------
-
-/**
- * Creates the DDoS protection middleware.
- *
- * @param {object} config - Merged WAF configuration
- * @returns {Function} Express middleware
- */
+// -----------------------------------------------------
+// Middleware
+// -----------------------------------------------------
 module.exports = function createDdosMiddleware(config) {
-  const ddosCfg = config.ddos || {};
+  const ddos = config.ddos || {};
 
-  // Resolved limits (fall back to spec defaults if config is partial)
-  const maxUrlLength    = ddosCfg.maxUrlLength    ?? 2048;
-  const maxHeaderCount  = ddosCfg.maxHeaderCount  ?? 100;
-  const maxHeaderSize   = ddosCfg.maxHeaderSize   ?? 8192;
+  const maxUrlLength = ddos.maxUrlLength ?? 2048;
+  const maxHeaderCount = ddos.maxHeaderCount ?? 100;
+  const maxHeaderSize = ddos.maxHeaderSize ?? 8192;
 
   const burst = {
-    windowMs:        ddosCfg.burst?.windowMs        ?? 1_000,
-    maxRequests:     ddosCfg.burst?.maxRequests      ?? 20,
-    blockDurationMs: ddosCfg.burst?.blockDurationMs  ?? 60_000,
-  };
-
-  const global_ = {
-    windowMs:    ddosCfg.global?.windowMs    ?? 1_000,
-    maxRequests: ddosCfg.global?.maxRequests ?? 500,
+    windowMs: ddos.burst?.windowMs ?? 1000,
+    maxRequests: ddos.burst?.maxRequests ?? 20,
+    blockDurationMs: ddos.burst?.blockDurationMs ?? 60000,
   };
 
   const fingerprint = {
-    windowMs:        ddosCfg.fingerprint?.windowMs        ?? 10_000,
-    maxRequests:     ddosCfg.fingerprint?.maxRequests      ?? 50,
-    blockDurationMs: ddosCfg.fingerprint?.blockDurationMs  ?? 60_000,
+    windowMs: ddos.fingerprint?.windowMs ?? 10000,
+    maxRequests: ddos.fingerprint?.maxRequests ?? 50,
+    blockDurationMs: ddos.fingerprint?.blockDurationMs ?? 60000,
   };
 
   const pathFlood = {
-    windowMs:    ddosCfg.pathFlood?.windowMs    ?? 5_000,
-    maxRequests: ddosCfg.pathFlood?.maxRequests ?? 200,
+    windowMs: ddos.pathFlood?.windowMs ?? 5000,
+    maxRequests: ddos.pathFlood?.maxRequests ?? 200,
   };
 
   const tarpit = {
-    enabled: ddosCfg.tarpit?.enabled ?? false,
-    delayMs: ddosCfg.tarpit?.delayMs ?? 2_000,
+    enabled: ddos.tarpit?.enabled ?? false,
+    delayMs: ddos.tarpit?.delayMs ?? 2000,
   };
 
-  // -------------------------------------------------------------------------
   return function ddos(req, res, next) {
-    // Trusted IPs bypass DDoS checks (already whitelisted upstream)
     if (req.wafTrusted) return next();
 
-    const ip  = req.wafIp || extractIp(req, config.trustedProxies || []);
+    const ip = req.wafIp || extractIp(req, config.trustedProxies || []);
     const now = Date.now();
 
-    // ------------------------------------------------------------------
-    // Layer 1 — URL length guard
-    // ------------------------------------------------------------------
-    if (req.url.length > maxUrlLength) {
+    const rawUrl = req.originalUrl || req.url;
+
+    // normalize path (remove query)
+    const path = req.path || rawUrl.split('?')[0];
+
+    // -------------------------------------------------
+    // 1. URL length
+    // -------------------------------------------------
+    if (rawUrl.length > maxUrlLength) {
       return block({
         config, req, res, next, ip,
-        rule:     'ddos-url-length',
+        rule: 'ddos-url-length',
         severity: 'high',
-        status:   414,
-        message:  'URI Too Long',
+        status: 414,
+        message: 'URI Too Long',
       }) && undefined;
     }
 
-    // ------------------------------------------------------------------
-    // Layer 2 — Header count guard
-    // ------------------------------------------------------------------
+    // -------------------------------------------------
+    // 2. Header count
+    // -------------------------------------------------
     if (Object.keys(req.headers).length > maxHeaderCount) {
       return block({
         config, req, res, next, ip,
-        rule:     'ddos-header-count',
+        rule: 'ddos-header-count',
         severity: 'high',
-        status:   431,
-        message:  'Too many request headers',
+        status: 431,
+        message: 'Too many headers',
       }) && undefined;
     }
 
-    // ------------------------------------------------------------------
-    // Layer 3 — Header size guard
-    // ------------------------------------------------------------------
-    for (const value of Object.values(req.headers)) {
-      if (typeof value === 'string' && value.length > maxHeaderSize) {
+    // -------------------------------------------------
+    // 3. Header size (bytes correct)
+    // -------------------------------------------------
+    for (const v of Object.values(req.headers)) {
+      if (!v) continue;
+
+      const size = Buffer.byteLength(
+        Array.isArray(v) ? v.join(',') : String(v),
+        'utf8'
+      );
+
+      if (size > maxHeaderSize) {
         return block({
           config, req, res, next, ip,
-          rule:     'ddos-header-size',
+          rule: 'ddos-header-size',
           severity: 'high',
-          status:   431,
-          message:  'Request header field too large',
+          status: 431,
+          message: 'Header too large',
         }) && undefined;
       }
     }
 
-    // ------------------------------------------------------------------
-    // Layer 4 — Burst rate limiter (per-IP, 1-second window)
-    // ------------------------------------------------------------------
-    {
-      let bEntry = burstStore.get(ip);
+    // -------------------------------------------------
+    // 4. Burst per IP (sliding window)
+    // -------------------------------------------------
+    let b = burstStore.get(ip);
 
-      // Check active block first
-      if (bEntry?.blockedUntil && now < bEntry.blockedUntil) {
-        // Tarpitting: delay repeat offenders before responding
-        if (tarpit.enabled && bEntry.blockCount > 3) {
-          const respond = () =>
-            block({
-              config, req, res, next, ip,
-              rule:     'ddos-burst',
-              severity: 'high',
-              status:   429,
-              message:  'Burst rate limit exceeded',
-            });
-
-          return void setTimeout(respond, tarpit.delayMs);
-        }
-
-        return block({
-          config, req, res, next, ip,
-          rule:     'ddos-burst',
-          severity: 'high',
-          status:   429,
-          message:  'Burst rate limit exceeded',
-        }) && undefined;
+    if (b?.blockedUntil && now < b.blockedUntil) {
+      if (tarpit.enabled) {
+        return setTimeout(() => {
+          block({
+            config, req, res, next, ip,
+            rule: 'ddos-burst',
+            severity: 'high',
+            status: 429,
+            message: 'Burst limit exceeded',
+          });
+        }, tarpit.delayMs);
       }
 
-      // Slide window
-      if (!bEntry || now - bEntry.windowStart >= burst.windowMs) {
-        bEntry = { count: 1, windowStart: now, blockedUntil: null, blockCount: bEntry?.blockCount ?? 0 };
-      } else {
-        bEntry.count += 1;
-      }
-
-      if (bEntry.count > burst.maxRequests) {
-        bEntry.blockedUntil = now + burst.blockDurationMs;
-        bEntry.blockCount   = (bEntry.blockCount || 0) + 1;
-        burstStore.set(ip, bEntry);
-
-        return block({
-          config, req, res, next, ip,
-          rule:     'ddos-burst',
-          severity: 'high',
-          status:   429,
-          message:  'Burst rate limit exceeded',
-        }) && undefined;
-      }
-
-      burstStore.set(ip, bEntry);
+      return block({
+        config, req, res, next, ip,
+        rule: 'ddos-burst',
+        severity: 'high',
+        status: 429,
+        message: 'Burst limit exceeded',
+      }) && undefined;
     }
 
-    // ------------------------------------------------------------------
-    // Layer 5 — Global rate limiter (all IPs combined)
-    // ------------------------------------------------------------------
-    {
-      if (now - globalCounter.windowStart >= global_.windowMs) {
-        globalCounter.count       = 0;
-        globalCounter.windowStart = now;
-      }
-      globalCounter.count += 1;
-
-      if (globalCounter.count > global_.maxRequests) {
-        return block({
-          config, req, res, next, ip,
-          rule:     'ddos-global-flood',
-          severity: 'critical',
-          status:   503,
-          message:  'Service temporarily unavailable',
-        }) && undefined;
-      }
+    if (!b || now - b.windowStart > burst.windowMs) {
+      b = { count: 1, windowStart: now, blockedUntil: null, blockCount: b?.blockCount ?? 0 };
+    } else {
+      b.count++;
     }
 
-    // ------------------------------------------------------------------
-    // Layer 6 — Request fingerprint flood detection
-    // ------------------------------------------------------------------
-    {
-      const ua  = req.headers['user-agent'] || '';
-      const fpKey = `${ip}\x00${ua}\x00${req.path}`;
+    if (b.count > burst.maxRequests) {
+      b.blockedUntil = now + burst.blockDurationMs;
+      b.blockCount++;
+      burstStore.set(ip, b);
 
-      let fpEntry = fpStore.get(fpKey);
-
-      // Check active block
-      if (fpEntry?.blockedUntil && now < fpEntry.blockedUntil) {
-        return block({
-          config, req, res, next, ip,
-          rule:     'ddos-fingerprint-flood',
-          severity: 'high',
-          status:   429,
-          message:  'Request fingerprint flood detected',
-        }) && undefined;
-      }
-
-      // Slide window
-      if (!fpEntry || now - fpEntry.windowStart >= fingerprint.windowMs) {
-        fpEntry = { count: 1, windowStart: now, blockedUntil: null };
-      } else {
-        fpEntry.count += 1;
-      }
-
-      if (fpEntry.count > fingerprint.maxRequests) {
-        fpEntry.blockedUntil = now + fingerprint.blockDurationMs;
-        fpStore.set(fpKey, fpEntry);
-
-        return block({
-          config, req, res, next, ip,
-          rule:     'ddos-fingerprint-flood',
-          severity: 'high',
-          status:   429,
-          message:  'Request fingerprint flood detected',
-        }) && undefined;
-      }
-
-      fpStore.set(fpKey, fpEntry);
+      return block({
+        config, req, res, next, ip,
+        rule: 'ddos-burst',
+        severity: 'high',
+        status: 429,
+        message: 'Burst limit exceeded',
+      }) && undefined;
     }
 
-    // ------------------------------------------------------------------
-    // Layer 7 — Repeated path flood (cross-IP, same endpoint)
-    // ------------------------------------------------------------------
-    {
-      let pEntry = pathStore.get(req.path);
+    burstStore.set(ip, b);
 
-      if (!pEntry || now - pEntry.windowStart >= pathFlood.windowMs) {
-        pEntry = { count: 1, windowStart: now };
-      } else {
-        pEntry.count += 1;
-      }
-
-      pathStore.set(req.path, pEntry);
-
-      if (pEntry.count > pathFlood.maxRequests) {
-        return block({
-          config, req, res, next, ip,
-          rule:     'ddos-path-flood',
-          severity: 'critical',
-          status:   503,
-          message:  'Service temporarily unavailable',
-        }) && undefined;
-      }
+    // -------------------------------------------------
+    // 5. Global rate limit
+    // -------------------------------------------------
+    if (now - globalCounter.windowStart > 60000) {
+      globalCounter.count = 0;
+      globalCounter.windowStart = now;
     }
 
-    // All DDoS layers passed
+    if (++globalCounter.count > (ddos.global?.maxRequests ?? 500)) {
+      return block({
+        config, req, res, next, ip,
+        rule: 'ddos-global',
+        severity: 'critical',
+        status: 503,
+        message: 'Service overloaded',
+      }) && undefined;
+    }
+
+    // -------------------------------------------------
+    // 6. Fingerprint
+    // -------------------------------------------------
+    const ua = req.headers['user-agent'] || '';
+    const accept = req.headers['accept'] || '';
+
+    const fp = `${ip}|${ua}|${accept}|${path}`;
+    let f = fpStore.get(fp);
+
+    if (f?.blockedUntil && now < f.blockedUntil) {
+      return block({
+        config, req, res, next, ip,
+        rule: 'ddos-fingerprint',
+        severity: 'high',
+        status: 429,
+        message: 'Fingerprint flood detected',
+      }) && undefined;
+    }
+
+    if (!f || now - f.windowStart > fingerprint.windowMs) {
+      f = { count: 1, windowStart: now, blockedUntil: null };
+    } else {
+      f.count++;
+    }
+
+    if (f.count > fingerprint.maxRequests) {
+      f.blockedUntil = now + fingerprint.blockDurationMs;
+      fpStore.set(fp, f);
+
+      return block({
+        config, req, res, next, ip,
+        rule: 'ddos-fingerprint',
+        severity: 'high',
+        status: 429,
+        message: 'Fingerprint flood detected',
+      }) && undefined;
+    }
+
+    fpStore.set(fp, f);
+
+    // -------------------------------------------------
+    // 7. Path flood (LRU protected)
+    // -------------------------------------------------
+    let p = pathStore.get(path);
+
+    if (!p || now - p.windowStart > pathFlood.windowMs) {
+      p = { count: 1, windowStart: now };
+    } else {
+      p.count++;
+    }
+
+    pathStore.set(path, p);
+
+    if (p.count > pathFlood.maxRequests) {
+      return block({
+        config, req, res, next, ip,
+        rule: 'ddos-path',
+        severity: 'critical',
+        status: 503,
+        message: 'Path flood detected',
+      }) && undefined;
+    }
+
     next();
   };
 };

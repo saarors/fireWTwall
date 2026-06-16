@@ -6,7 +6,21 @@ const net = require('net');
  * Convert an IPv4 address string to a 32-bit integer.
  */
 function ipv4ToInt(ip) {
-  return ip.split('.').reduce((acc, octet) => (acc << 8) + parseInt(octet, 10), 0) >>> 0;
+  const parts = ip.trim().split('.');
+
+  if (parts.length !== 4) {
+    throw new Error('Invalid IPv4 address');
+  }
+
+  return (parts.reduce((acc, part) => {
+    const num = Number(part);
+
+    if (!Number.isInteger(num) || num < 0 || num > 255) {
+      throw new Error('Invalid IPv4 segment');
+    }
+
+    return (acc << 8) + num;
+  }, 0)) >>> 0;
 }
 
 /**

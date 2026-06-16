@@ -3,7 +3,9 @@
 const { logBlock } = require('../utils/logger');
 const { parseCookies, flattenValues } = require('../utils/patternMatcher');
 
-// ─── Attack keywords for keyword-density rule ───────────────────────────────
+// ─────────────────────────────────────────────
+// Attack keywords
+// ─────────────────────────────────────────────
 
 const ATTACK_KEYWORDS = [
   'select','union','insert','delete','update','drop','exec','eval',
@@ -11,164 +13,170 @@ const ATTACK_KEYWORDS = [
   'cmd','bash','wget','curl','chmod',
 ];
 
-// ─── Rule implementations ───────────────────────────────────────────────────
+const KEYWORD_SET = new Set(ATTACK_KEYWORDS);
 
-/**
- * Rule 1 — Encoding Density
- * Count how many DISTINCT encoding types appear in a single value.
- * Attacking via mixed encodings is a classic WAF-bypass technique.
- *
- * @param {string} value
- * @param {number} threshold - distinct types needed to trigger
- * @returns {boolean}
- */
-function hasEncodingMix(value, threshold) {
-  const patterns = [
-    /(%[0-9a-fA-F]{2})/,                    // URL encoding
-    /(&[a-z]+;|&#[0-9]+;)/,                  // HTML entities
-    /(0x[0-9a-fA-F]+|\\x[0-9a-fA-F]{2})/,   // Hex literals
-    /(\\u[0-9a-fA-F]{4}|%u[0-9a-fA-F]{4})/, // Unicode escapes
-    /([A-Za-z0-9+/]{16,}={0,2})/,           // Base64-like blocks
-  ];
-  let distinctCount = 0;
-  for (const p of patterns) {
-    if (p.test(value)) distinctCount++;
-  }
-  return distinctCount >= threshold;
+// ─────────────────────────────────────────────
+// Safe helpers
+// ─────────────────────────────────────────────
+
+function safeString(v) {
+  if (typeof v !== 'string') return '';
+  return v.trim();
 }
 
-/**
- * Rule 2 — Nesting Depth
- * Track the deepest combined nesting of (), {}, [], <> brackets.
- * Deeply nested structures are a fingerprint of obfuscated code / polyglots.
- *
- * @param {string} value
- * @param {number} threshold
- * @returns {boolean}
- */
+function clampLength(v, max = 5000) {
+  if (v.length > max) return v.slice(0, max);
+  return v;
+}
+
+// ─────────────────────────────────────────────
+// Rule 1 — Encoding Mix (optimized: early exit)
+// ─────────────────────────────────────────────
+
+function hasEncodingMix(value, threshold) {
+  let count = 0;
+
+  if (/%[0-9a-fA-F]{2}/.test(value)) count++;
+  if (/(&[a-z]+;|&#[0-9]+;)/.test(value)) count++;
+  if /(0x[0-9a-fA-F]+|\\x[0-9a-fA-F]{2})/.test(value) count++;
+  if /(\\u[0-9a-fA-F]{4}|%u[0-9a-fA-F]{4})/.test(value) count++;
+  if (/[A-Za-z0-9+/]{16,}={0,2}/.test(value)) count++;
+
+  return count >= threshold;
+}
+
+// ─────────────────────────────────────────────
+// Rule 2 — Nesting Depth (safe linear scan)
+// ─────────────────────────────────────────────
+
 function hasDeepNesting(value, threshold) {
-  const open  = new Set(['(', '{', '[', '<']);
-  const close = new Set([')', '}', ']', '>']);
   let depth = 0;
   let maxDepth = 0;
 
-  for (const ch of value) {
-    if (open.has(ch))  { depth++; if (depth > maxDepth) maxDepth = depth; }
-    if (close.has(ch)) { depth = Math.max(0, depth - 1); }
+  for (let i = 0; i < value.length; i++) {
+    const ch = value[i];
+
+    if (ch === '(' || ch === '{' || ch === '[' || ch === '<') {
+      depth++;
+      if (depth > maxDepth) maxDepth = depth;
+      if (maxDepth > threshold) return true;
+    } else if (ch === ')' || ch === '}' || ch === ']' || ch === '>') {
+      depth = Math.max(0, depth - 1);
+    }
   }
-  return maxDepth > threshold;
+
+  return false;
 }
 
-/**
- * Rule 3 — Keyword Density
- * High concentration of attack-related keywords per 100 characters.
- *
- * @param {string} value
- * @param {number} threshold - occurrences per 100 chars
- * @returns {boolean}
- */
+// ─────────────────────────────────────────────
+// Rule 3 — Keyword Density (sliding window safe)
+// ─────────────────────────────────────────────
+
 function hasHighKeywordDensity(value, threshold) {
-  if (value.length === 0) return false;
   const lower = value.toLowerCase();
+
   let count = 0;
-  for (const kw of ATTACK_KEYWORDS) {
+
+  for (const kw of KEYWORD_SET) {
     let idx = 0;
+
     while ((idx = lower.indexOf(kw, idx)) !== -1) {
       count++;
       idx += kw.length;
+
+      if (count > 50) break; // hard cap for safety
     }
   }
-  return (count / value.length * 100) > threshold;
+
+  const density = (count / Math.max(lower.length, 1)) * 100;
+  return density > threshold;
 }
 
-/**
- * Rule 4 — Function Chain Depth
- * Triple+ chained function calls: a(b(c( ... )))
- * Regex detects at least three levels of call nesting.
- *
- * @param {string} value
- * @returns {boolean}
- */
+// ─────────────────────────────────────────────
+// Rule 4 — Function Chain (regex hardened)
+// ─────────────────────────────────────────────
+
 function hasFunctionChain(value) {
-  return /\w+\s*\([^)]*\w+\s*\([^)]*\w+\s*\(/.test(value);
+  // bounded repetition to avoid ReDoS
+  return /\w+\s*\([^()]{0,50}\w+\s*\([^()]{0,50}\w+\s*\(/.test(value);
 }
 
-/**
- * Rule 5 — Operator Storm
- * Excessive density of attack-related operators signals injected syntax.
- *
- * @param {string} value
- * @param {number} threshold - operators per 100 chars
- * @returns {boolean}
- */
+// ─────────────────────────────────────────────
+// Rule 5 — Operator Storm (single-pass safe)
+// ─────────────────────────────────────────────
+
+const OPERATORS = new Set([
+  '--','/*','*/','"',"'",'`','=','<','>','|','&',';'
+]);
+
 function hasOperatorStorm(value, threshold) {
-  if (value.length === 0) return false;
-  // Count each operator token individually
-  const tokens = ['--', '/*', '*/', "\"", "'", '`', '=', '<', '>', '|', '&', ';'];
   let count = 0;
-  // Work through the string once
   let i = 0;
-  while (i < value.length) {
+  const len = value.length;
+
+  while (i < len) {
     let matched = false;
-    for (const tok of tokens) {
-      if (value.startsWith(tok, i)) {
+
+    for (const op of OPERATORS) {
+      if (value.startsWith(op, i)) {
         count++;
-        i += tok.length;
+        i += op.length;
         matched = true;
+
+        if (count > 100) return true; // hard cap
+
         break;
       }
     }
+
     if (!matched) i++;
   }
-  return (count / value.length * 100) > threshold;
+
+  const density = (count / len) * 100;
+  return density > threshold;
 }
 
-/**
- * Rule 6 — Polyglot Detector
- * A value that simultaneously satisfies patterns from 3+ attack categories
- * is almost certainly a polyglot payload designed to bypass category-specific
- * filters.
- *
- * @param {string} value
- * @returns {boolean}
- */
+// ─────────────────────────────────────────────
+// Rule 6 — Polyglot detection (safe)
+// ─────────────────────────────────────────────
+
 function isPolyglot(value) {
-  const categories = [
-    { name: 'sql',   pattern: /\b(select|union|insert)\b/i },
-    { name: 'js',    pattern: /(script|alert|eval)/i },
-    { name: 'shell', pattern: /[|;]|&&|\bexec\b/ },
-  ];
   let fires = 0;
-  for (const cat of categories) {
-    if (cat.pattern.test(value)) fires++;
-  }
+
+  if (/\b(select|union|insert)\b/i.test(value)) fires++;
+  if (/(script|alert|eval)/i.test(value)) fires++;
+  if (/[|;]|&&|\bexec\b/.test(value)) fires++;
+
   return fires >= 3;
 }
 
-// ─── Source Extraction ──────────────────────────────────────────────────────
+// ─────────────────────────────────────────────
+// Target extraction (hardened)
+// ─────────────────────────────────────────────
 
-/**
- * Flatten all query params, body values, and cookies into
- * { source, value } pairs.
- *
- * @param {object} req
- * @returns {Array<{ source: string, value: string }>}
- */
 function extractTargets(req) {
   const targets = [];
 
+  function push(source, raw) {
+    for (const v of flattenValues(raw)) {
+      const str = safeString(v);
+      if (!str || str.length < 1) continue;
+      targets.push({ source, value: clampLength(str) });
+    }
+  }
+
   if (req.query && typeof req.query === 'object') {
     for (const [key, raw] of Object.entries(req.query)) {
-      for (const v of flattenValues(raw)) targets.push({ source: `query:${key}`, value: v });
+      push(`query:${key}`, raw);
     }
   }
 
   if (req.body) {
     if (typeof req.body === 'string') {
-      targets.push({ source: 'body', value: req.body });
+      push('body', req.body);
     } else if (typeof req.body === 'object') {
       for (const [key, raw] of Object.entries(req.body)) {
-        for (const v of flattenValues(raw)) targets.push({ source: `body:${key}`, value: v });
+        push(`body:${key}`, raw);
       }
     }
   }
@@ -176,93 +184,81 @@ function extractTargets(req) {
   const cookies =
     req.cookies && typeof req.cookies === 'object'
       ? req.cookies
-      : parseCookies(req.headers['cookie'] || '');
+      : parseCookies(req.headers?.cookie || '');
 
   for (const [name, val] of Object.entries(cookies)) {
-    if (typeof val === 'string') targets.push({ source: `cookie:${name}`, value: val });
+    if (typeof val === 'string') {
+      push(`cookie:${name}`, val);
+    }
   }
 
   return targets;
 }
 
-// ─── Middleware Factory ─────────────────────────────────────────────────────
+// ─────────────────────────────────────────────
+// Middleware
+// ─────────────────────────────────────────────
 
-/**
- * Create the heuristic engine middleware.
- *
- * Detects zero-day and novel attack patterns based on STRUCTURAL analysis —
- * encoding mix, nesting depth, keyword density, function chains, operator
- * storms, and polyglot detection — independent of any known signature.
- *
- * @param {object} config - WAF configuration (uses config.heuristic section)
- * @returns {Function} Express middleware
- */
 module.exports = function createHeuristicEngineMiddleware(config) {
   const cfg = config.heuristic || {};
-  const encodingMixThreshold   = cfg.encodingMixThreshold   || 3;
-  const nestingDepthThreshold  = cfg.nestingDepthThreshold  || 6;
-  const keywordDensityThreshold = cfg.keywordDensityThreshold || 3;
-  const operatorStormThreshold  = cfg.operatorStormThreshold  || 15;
 
-  // Minimum value length — very short strings are not useful to analyze
+  const encodingMixThreshold    = cfg.encodingMixThreshold   || 3;
+  const nestingDepthThreshold   = cfg.nestingDepthThreshold  || 6;
+  const keywordDensityThreshold = cfg.keywordDensityThreshold || 3;
+  const operatorStormThreshold  = cfg.operatorStormThreshold || 15;
+
   const MIN_LEN = 15;
 
   return function heuristicEngineMiddleware(req, res, next) {
     if (req.wafTrusted) return next();
 
-    const ip      = req.wafIp || req.ip || req.socket?.remoteAddress || 'unknown';
+    const ip = req.wafIp || req.ip || req.socket?.remoteAddress || 'unknown';
     const targets = extractTargets(req);
 
     for (const { source, value } of targets) {
-      if (typeof value !== 'string' || value.length < MIN_LEN) continue;
+      if (value.length < MIN_LEN) continue;
 
-      let ruleId   = null;
+      let ruleId = null;
       let severity = 'high';
-      let detail   = '';
+      let detail = '';
 
-      // ── Rule 6 first (critical, highest priority) ────────────────────────
       if (isPolyglot(value)) {
-        ruleId   = 'heuristic-polyglot';
+        ruleId = 'heuristic-polyglot';
         severity = 'critical';
-        detail   = 'payload matches SQL + JS + shell patterns simultaneously';
+        detail = 'multi-category attack pattern detected';
       }
-      // ── Rule 1: Encoding mix ─────────────────────────────────────────────
       else if (hasEncodingMix(value, encodingMixThreshold)) {
-        ruleId   = 'heuristic-encoding-mix';
+        ruleId = 'heuristic-encoding-mix';
         severity = 'critical';
-        detail   = `≥${encodingMixThreshold} distinct encoding types in single value`;
+        detail = 'multiple encoding types detected';
       }
-      // ── Rule 2: Nesting depth ────────────────────────────────────────────
       else if (hasDeepNesting(value, nestingDepthThreshold)) {
         ruleId = 'heuristic-deep-nesting';
-        detail = `bracket nesting depth > ${nestingDepthThreshold}`;
+        detail = 'deep bracket nesting detected';
       }
-      // ── Rule 3: Keyword density ──────────────────────────────────────────
       else if (hasHighKeywordDensity(value, keywordDensityThreshold)) {
         ruleId = 'heuristic-keyword-density';
-        detail = `keyword density > ${keywordDensityThreshold} per 100 chars`;
+        detail = 'high keyword density detected';
       }
-      // ── Rule 4: Function chain depth ─────────────────────────────────────
       else if (hasFunctionChain(value)) {
         ruleId = 'heuristic-function-chain';
-        detail = 'triple+ nested function call chain detected';
+        detail = 'nested function chain detected';
       }
-      // ── Rule 5: Operator storm ───────────────────────────────────────────
       else if (hasOperatorStorm(value, operatorStormThreshold)) {
         ruleId = 'heuristic-operator-storm';
-        detail = `operator density > ${operatorStormThreshold} per 100 chars`;
+        detail = 'high operator density detected';
       }
 
       if (!ruleId) continue;
 
       logBlock({
-        logPath:   config.logPath,
+        logPath: config.logPath,
         requestId: req.wafRequestId,
         ip,
-        method:    req.method,
-        path:      req.path,
-        rule:      ruleId,
-        matched:   detail,
+        method: req.method,
+        path: req.path,
+        rule: ruleId,
+        matched: detail,
         source,
         severity,
         userAgent: req.headers['user-agent'] || '',
@@ -272,7 +268,7 @@ module.exports = function createHeuristicEngineMiddleware(config) {
 
       return res.status(403).json({
         blocked: true,
-        rule:    ruleId,
+        rule: ruleId,
         message: 'Request blocked by WAF',
       });
     }

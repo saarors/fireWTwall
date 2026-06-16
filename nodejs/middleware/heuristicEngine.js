@@ -38,8 +38,8 @@ function hasEncodingMix(value, threshold) {
 
   if (/%[0-9a-fA-F]{2}/.test(value)) count++;
   if (/(&[a-z]+;|&#[0-9]+;)/.test(value)) count++;
-  if (/(0x[0-9a-fA-F]+|\\x[0-9a-fA-F]{2})/.test(value) count++;
-  if (/(\\u[0-9a-fA-F]{4}|%u[0-9a-fA-F]{4})/.test(value) count++;
+  if (/(0x[0-9a-fA-F]+|\\x[0-9a-fA-F]{2})/.test(value)) count++;
+  if (/(\\u[0-9a-fA-F]{4}|%u[0-9a-fA-F]{4})/.test(value)) count++;
   if (/[A-Za-z0-9+/]{16,}={0,2}/.test(value)) count++;
 
   return count >= threshold;

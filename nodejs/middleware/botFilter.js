@@ -3,32 +3,43 @@
 const path = require('path');
 const { logBlock } = require('../utils/logger');
 
-// Load bot config once at module load — require() is cached after first call
 const botsConfig = require(path.resolve(__dirname, '../config/bad-bots.json'));
 
-const blockedPatterns = botsConfig.blocked.map(
-  (s) => new RegExp(s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i')
-);
-const allowedPatterns = botsConfig.allowed.map(
-  (s) => new RegExp(s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i')
-);
-const blockEmptyUA = botsConfig.blockEmptyUserAgent !== false; // default true
+function escapeRegex(str) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
 
-// Suspicious header patterns typical of automated tools/curl
+// Compile patterns once
+const blockedPatterns = (botsConfig.blocked || []).map(
+  (s) => new RegExp(escapeRegex(s), 'i')
+);
+
+const allowedPatterns = (botsConfig.allowed || []).map(
+  (s) => new RegExp(escapeRegex(s), 'i')
+);
+
+const blockEmptyUA = botsConfig.blockEmptyUserAgent !== false;
+
 const suspiciousPatterns = [
   /^(curl|wget|python|perl|ruby|php|java|go|node)[\s\/\-]/i,
   /^libcurl/i,
-  /^HTTPClient/i,
-  /^Apache-HttpClient/i,
-  /^OkHttpClient/i,
-  /^java\.net\.URLConnection/i,
+  /^httpclient/i,
+  /^apache-httpclient/i,
+  /^okhttpclient/i,
+  /^java\.net\.urlconnection/i,
   /^scrapy/i,
   /^mechanize/i,
   /^urllib/i,
 ];
 
-function isSuspiciousUA(ua) {
+function isSuspiciousUA(ua = '') {
   return suspiciousPatterns.some((p) => p.test(ua));
+}
+
+function sendBlocked(res, status, payload, mode) {
+  if (mode === 'log-only') return false;
+  res.status(status).json(payload);
+  return true;
 }
 
 function createBotFilterMiddleware(config) {
@@ -37,42 +48,45 @@ function createBotFilterMiddleware(config) {
 
     const ua = req.headers['user-agent'] || '';
     const ip = req.wafIp || req.socket?.remoteAddress || 'unknown';
-    const accept = req.headers['accept'] || '';
 
-    // Block missing / empty User-Agent — no legitimate browser or API client omits it
-    if (ua === '' && blockEmptyUA) {
+    const acceptLang = req.headers['accept-language'] || '';
+    const secChUa = req.headers['sec-ch-ua'] || '';
+
+    const logBase = {
+      logPath: config.logPath,
+      ip,
+      method: req.method,
+      path: req.path,
+    };
+
+    // Weak signal: missing UA (don’t hard block in modern environments)
+    if (!ua && blockEmptyUA) {
       logBlock({
-        logPath: config.logPath,
-        ip,
-        method: req.method,
-        path: req.path,
+        ...logBase,
         rule: 'missing-user-agent',
         matched: '',
         source: 'user-agent',
-        severity: 'medium',
+        severity: 'low',
         userAgent: '',
       });
 
-      if (config.mode !== 'log-only') {
-        return res.status(403).json({
-          blocked: true,
-          rule: 'missing-user-agent',
-          message: 'Access denied',
-        });
-      }
+      if (sendBlocked(res, 403, {
+        blocked: true,
+        rule: 'missing-user-agent',
+        message: 'Access denied',
+      }, config.mode)) return;
+
+      return next();
     }
 
-    // Allowed bots always pass
+    // Allowed bots
     if (allowedPatterns.some((p) => p.test(ua))) return next();
 
-    // Check blocklist
-    const hit = blockedPatterns.find((p) => p.test(ua));
-    if (hit) {
+    // Blocklist
+    const blocked = blockedPatterns.find((p) => p.test(ua));
+    if (blocked) {
       logBlock({
-        logPath: config.logPath,
-        ip,
-        method: req.method,
-        path: req.path,
+        ...logBase,
         rule: 'bad-bot',
         matched: ua.slice(0, 120),
         source: 'user-agent',
@@ -80,22 +94,19 @@ function createBotFilterMiddleware(config) {
         userAgent: ua,
       });
 
-      if (config.mode === 'log-only') return next();
-
-      return res.status(403).json({
+      if (sendBlocked(res, 403, {
         blocked: true,
         rule: 'bad-bot',
         message: 'Access denied',
-      });
+      }, config.mode)) return;
+
+      return next();
     }
 
-    // Check for suspicious programmatic patterns (curl, python, etc.)
+    // Suspicious automation
     if (isSuspiciousUA(ua)) {
       logBlock({
-        logPath: config.logPath,
-        ip,
-        method: req.method,
-        path: req.path,
+        ...logBase,
         rule: 'suspicious-automation',
         matched: ua.slice(0, 120),
         source: 'user-agent',
@@ -103,12 +114,24 @@ function createBotFilterMiddleware(config) {
         userAgent: ua,
       });
 
-      if (config.mode === 'log-only') return next();
-
-      return res.status(403).json({
+      if (sendBlocked(res, 403, {
         blocked: true,
         rule: 'suspicious-automation',
         message: 'Access denied',
+      }, config.mode)) return;
+
+      return next();
+    }
+
+    // Optional weak bot signals (not blocking alone)
+    if (!acceptLang && !secChUa && ua.length < 10) {
+      logBlock({
+        ...logBase,
+        rule: 'low-signal-request',
+        matched: ua,
+        source: 'headers',
+        severity: 'low',
+        userAgent: ua,
       });
     }
 

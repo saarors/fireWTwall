@@ -20,7 +20,7 @@ function createIpFilterMiddleware(config) {
         logPath: config.logPath,
         ip,
         method: req.method,
-        path: req.path,
+        path: req.originalUrl,
         rule: 'ip-blacklist',
         severity: 'high',
         userAgent: req.headers['user-agent'] || '',

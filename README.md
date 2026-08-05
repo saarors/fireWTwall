@@ -11,7 +11,9 @@
 [![Author](https://img.shields.io/badge/author-saarors-blue)](https://github.com/saarors)
 
 > **Designed, built and maintained by [saarors](https://github.com/saarors)**
-
+**Send any questions or security breaches to email and not here!**
+>
+> 
 A production-ready **Web Application Firewall (WAF)** with **zero external runtime dependencies**.
 Available as an **npm package** for Node.js, Bun, and Express — as a drop-in **PHP auto-prepend file** — and as an **ASP.NET HttpModule** for classic .NET Web Forms / MVC.
 

@@ -25,14 +25,42 @@ function ipv4ToInt(ip) {
 
 /**
  * Check whether an IPv4 address is within a CIDR range.
- * @param {string} ip   - e.g. "192.168.1.50"
- * @param {string} cidr - e.g. "192.168.1.0/24"
  */
 function ipv4InCidr(ip, cidr) {
   const [range, bits] = cidr.split('/');
-  const mask = bits === undefined ? 32 : parseInt(bits, 10);
-  const maskInt = mask === 0 ? 0 : (~0 << (32 - mask)) >>> 0;
-  return (ipv4ToInt(ip) & maskInt) === (ipv4ToInt(range) & maskInt);
+
+  const mask = bits === undefined
+    ? 32
+    : parseInt(bits, 10);
+
+  if (mask < 0 || mask > 32 || Number.isNaN(mask)) {
+    return false;
+  }
+
+  const maskInt = mask === 0
+    ? 0
+    : (~0 << (32 - mask)) >>> 0;
+
+  return (
+    (ipv4ToInt(ip) & maskInt) ===
+    (ipv4ToInt(range) & maskInt)
+  );
+}
+
+/**
+ * Normalize IPv4-mapped IPv6 and remove zone identifiers.
+ */
+function normalizeIp(ip) {
+  if (!ip) return null;
+
+  ip = ip.split('%')[0];
+
+  // Convert IPv4-mapped IPv6 to IPv4
+  if (ip.startsWith('::ffff:')) {
+    ip = ip.substring(7);
+  }
+
+  return ip;
 }
 
 /**
@@ -67,10 +95,20 @@ function ipv6ToBigInt(ip) {
  */
 function ipv6InCidr(ip, cidr) {
   const [range, bits] = cidr.split('/');
-  const prefix = bits === undefined ? 128 : parseInt(bits, 10);
+
+  const prefix = bits === undefined
+    ? 128
+    : parseInt(bits, 10);
+
+  if (prefix < 0 || prefix > 128 || Number.isNaN(prefix)) {
+    return false;
+  }
+
   const shift = BigInt(128 - prefix);
+
   const ipInt = ipv6ToBigInt(ip) >> shift;
   const rangeInt = ipv6ToBigInt(range) >> shift;
+
   return ipInt === rangeInt;
 }
 
@@ -87,19 +125,21 @@ function ipv6InCidr(ip, cidr) {
 function ipMatchesEntry(ip, entry) {
   if (!ip || !entry) return false;
 
-  // Strip IPv6 zone ID from the incoming IP
-  const cleanIp = ip.split('%')[0];
+  const cleanIp = normalizeIp(ip);
+  const cleanEntry = normalizeIp(entry);
 
-  const hasCidr = entry.includes('/');
+  const hasCidr = cleanEntry.includes('/');
 
   if (!hasCidr) {
-    return cleanIp === entry;
+    return cleanIp === cleanEntry;
   }
 
-  const isIPv6 = entry.includes(':') || cleanIp.includes(':');
+  const isIPv6 = cleanEntry.includes(':') || cleanIp.includes(':');
 
   try {
-    return isIPv6 ? ipv6InCidr(cleanIp, entry) : ipv4InCidr(cleanIp, entry);
+    return isIPv6
+      ? ipv6InCidr(cleanIp, cleanEntry)
+      : ipv4InCidr(cleanIp, cleanEntry);
   } catch {
     return false;
   }
@@ -120,7 +160,9 @@ function ipInList(ip, list) {
  * @param {string[]} trustedProxies
  */
 function extractIp(req, trustedProxies = []) {
-  const remoteIp = req.socket?.remoteAddress || '0.0.0.0';
+  const remoteIp = normalizeIp(
+  req.socket?.remoteAddress || '0.0.0.0'
+);
 
   if (trustedProxies.length === 0) return remoteIp;
   if (!ipInList(remoteIp, trustedProxies)) return remoteIp;
@@ -132,9 +174,14 @@ function extractIp(req, trustedProxies = []) {
   // The leftmost non-trusted IP is the real client.
   const candidates = xff.split(',').map((s) => s.trim()).reverse();
   for (const candidate of candidates) {
-    if (net.isIP(candidate) && !ipInList(candidate, trustedProxies)) {
-      return candidate;
-    }
+const normalizedCandidate = normalizeIp(candidate);
+
+if (
+  net.isIP(normalizedCandidate) &&
+  !ipInList(normalizedCandidate, trustedProxies)
+) {
+  return normalizedCandidate;
+}
   }
   return remoteIp;
 }
